@@ -1,0 +1,46 @@
+Python version: 3.12.12
+PyTorch version: 2.10.0+cu128
+torch_geometric version: 2.7.0
+CUDA available: True
+
+PROJECT REQUIREMENT — MILESTONE 1 + MILESTONE 3 SETUP:
+OGBG-MOLHIV is confirmed as the LARGEST of the three datasets (41,127 graphs
+vs Amazon's 13,752 nodes and Airports' 1,190 nodes). Per the project rubric,
+the two required additional analyses (Milestone 3) will be conducted on this
+dataset across all three GNN models.
+
+Downloading http://snap.stanford.edu/ogb/data/graphproppred/csv_mol_download/hiv.zip
+Downloaded 0.00 GB: 100%|██████████| 3/3 [00:00<00:00,  4.13it/s]
+Processing...
+Extracting ./hiv.zip
+Loading necessary files...
+This might take a while.
+Processing graphs...
+100%|██████████| 41127/41127 [00:00<00:00, 117970.07it/s]
+Converting graphs into PyG objects...
+100%|██████████| 41127/41127 [00:01<00:00, 37792.52it/s]
+Saving...
+Done!
+1. len(dataset) == 41127
+2. Split sizes: train=32901, val=4113, test=4113
+3. Class distribution per split:
+   Train: label=0 count=31669, label=1 count=1232, positive rate=3.74%
+   Val: label=0 count=4032, label=1 count=81, positive rate=1.97%
+   Test: label=0 count=3983, label=1 count=130, positive rate=3.16%
+4. Mean ± std of num_nodes per graph: 25.51 ± 12.11
+4. Mean ± std of num_edges per graph: 54.94 ± 26.43
+5. data[0].x.shape: torch.Size([19, 9]), data[0].edge_attr.shape: torch.Size([40, 3])
+6. pos_weight = num_negatives_train / num_positives_train = 25.71
+7. Does scaffold splitting cause positive rate to differ between train and test? Yes, scaffold splitting separates distinct chemical scaffolds into different sets, causing the positive class prevalence to vary.
+8. evaluator.eval_metric = rocauc
+
+WHY BOTH ATOM FEATURES AND BOND STRUCTURE ARE NECESSARY:
+  Atom features (pharmacophores): identify specific functional groups such as
+  charged nitrogens required for chemical binding affinity. Without knowing
+  atom TYPE, the model cannot identify whether a binding site is present.
+  Bond structure (geometric fit): a linear chain vs a ring structure interacts
+  differently with the HIV enzyme pocket, even with identical atoms. Bond type
+  (single/double/aromatic) changes electron density and 3D geometry entirely.
+  A model using atoms only cannot reason about molecular shape; a model using
+  topology only cannot identify which atoms are pharmacologically active.
+  Both conditions must be simultaneously met for a molecule to inhibit HIV.

@@ -1,0 +1,72 @@
+{
+  "amazon_accs": {
+    "GAT": 0.9099,
+    "SAGE": 0.908,
+    "GIN": 0.8826
+  },
+  "amazon_f1": {
+    "GAT": 0.902,
+    "SAGE": 0.8948,
+    "GIN": 0.8651
+  },
+  "amazon_time": {
+    "GAT": 14.98,
+    "SAGE": 17.94,
+    "GIN": 18.92
+  },
+  "amazon_rank": {
+    "GAT": 1,
+    "SAGE": 2,
+    "GIN": 3
+  },
+  "airports_ord_kappas": {
+    "GAT": 0.5068670792808724,
+    "SAGE": 0.3773250059724924,
+    "GIN": 0.575761952910588
+  },
+  "airports_rank": {
+    "GIN": 1,
+    "GAT": 2,
+    "SAGE": 3
+  },
+  "airports_ord_times": {
+    "GAT": 2.1553523540496826,
+    "SAGE": 1.2741708755493164,
+    "GIN": 1.4031424522399902
+  },
+  "molhiv_rocs": {
+    "GIN": 0.7436142065316054,
+    "GAT": 0.7621139844338438,
+    "SAGE": 0.7607910542884181
+  },
+  "molhiv_rank": {
+    "GAT": 1,
+    "SAGE": 2,
+    "GIN": 3
+  },
+  "molhiv_times": {
+    "GIN": 1366.7613854408264,
+    "GAT": 1492.5210156440735,
+    "SAGE": 1126.6608581542969
+  },
+  "rank_sum": {
+    "GAT": 4,
+    "SAGE": 7,
+    "GIN": 7
+  },
+  "amazon_ranks_list": [
+    1,
+    2,
+    3
+  ],
+  "airports_ranks_list": [
+    2,
+    3,
+    1
+  ],
+  "molhiv_ranks_list": [
+    1,
+    2,
+    3
+  ]
+}

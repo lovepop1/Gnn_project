@@ -1,0 +1,74 @@
+Python version: 3.12.12 (main, Oct 10 2025, 08:52:57) [GCC 11.4.0]
+PyTorch version: 2.10.0+cu128
+torch_geometric version: 2.7.0
+CUDA available: True
+Downloading https://github.com/leoribeiro/struc2vec/raw/master/graph/usa-airports.edgelist
+Downloading https://github.com/leoribeiro/struc2vec/raw/master/graph/labels-usa-airports.txt
+Processing...
+Done!
+
+1. Confirm num_nodes=1190, num_edges=13599, x.shape=[1190,1190]
+
+2. Label distribution: count + % per class 0–3
+class 0: count=297 (24.96%)
+class 1: count=297 (24.96%)
+class 2: count=297 (24.96%)
+class 3: count=299 (25.13%)
+
+3. Degree stats: mean, median, max, min, std
+mean=22.8555, median=6.0000, max=238, min=1, std=40.4495
+
+4. Top-10 highest-degree airports: index + degree
+949: 238
+29: 230
+86: 224
+608: 212
+590: 208
+607: 206
+613: 205
+357: 199
+360: 196
+1128: 193
+
+5. Spearman correlation (degree vs label)
+corr=-0.7730018293308147
+pval=4.859032682671027e-237
+This indicates a statistically significant monotonic relationship at alpha=0.05.
+
+6. Graph connectivity: single connected component?
+single_connected_component? False (num_components=3)
+WHY STRUCTURE IS THE ONLY SIGNAL:
+  One-hot identity features are arbitrary node IDs — an MLP trained on them
+  cannot generalise to predict activity for any node. Only graph-structural
+  position (neighbourhood connectivity via message passing) is transferable.
+
+ORDINAL vs CLASSIFICATION FORMULATION:
+  Original paper treats labels 0,1,2,3 as independent unordered classes.
+  CrossEntropyLoss penalises predicting 0 for a true 3 hub IDENTICALLY to
+  predicting 2 for a true 3 hub — the natural ordering 0<1<2<3 is ignored.
+  Our ordinal approach uses MSELoss on a scalar: predicting 0 for a true 3
+  incurs (3−0)²=9 vs (2−3)²=1, penalising large ordinal violations quadratically.
+  Spearman corr = -0.7730018293308147 (p=4.859032682671027e-237): labels have continuous monotonic structure
+  that justifies treating them as an ordered scale rather than categories.
+  Both formulations will be trained in P2 to empirically validate this claim.
+
+Splits (70/15/15, seed=42)
+Saved splits to: splits_usa.pt
+
+train: num_samples=833
+  class 0: count=211 (25.33%)
+  class 1: count=212 (25.45%)
+  class 2: count=207 (24.85%)
+  class 3: count=203 (24.37%)
+
+val: num_samples=179
+  class 0: count=45 (25.14%)
+  class 1: count=37 (20.67%)
+  class 2: count=43 (24.02%)
+  class 3: count=54 (30.17%)
+
+test: num_samples=178
+  class 0: count=41 (23.03%)
+  class 1: count=48 (26.97%)
+  class 2: count=47 (26.40%)
+  class 3: count=42 (23.60%)

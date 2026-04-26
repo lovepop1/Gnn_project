@@ -1,0 +1,75 @@
+=================================================================
+MILESTONE 1 — Amazon Computers Dataset Analysis
+=================================================================
+
+── 1. Core Statistics ──────────────────────────────────
+  num_nodes         : 13752
+  num_edges         : 491722
+  num_node_features : 767
+  num_classes       : 10
+
+── 2. Shape Confirmation ───────────────────────────────
+  data.x.shape == [13752,767]     → ✓ CONFIRMED
+  data.edge_index.shape==[2,245778]→ ✗ MISMATCH
+
+── 3. Feature Sparsity ─────────────────────────────────
+  Total values : 10,547,784
+  Zero  values : 6,872,703
+  Sparsity     : 0.651578  (65.16%)
+
+── 4. Class Distribution ───────────────────────────────
+   Class    Count   Percent
+       0      436     3.17%
+       1    2,142    15.58%
+       2    1,414    10.28%
+       3      542     3.94%
+       4    5,158    37.51%
+       5      308     2.24%
+       6      487     3.54%
+       7      818     5.95%
+       8    2,156    15.68%
+       9      291     2.12%
+
+── 5. Degree Statistics ────────────────────────────────
+  Mean   : 35.7564
+  Median : 22.0
+  Max    : 2992
+  Min    : 0
+  Std    : 70.3056
+
+── 6. Top-10 Highest-Degree Nodes ──────────────────────
+  Rank          Node    Degree
+     1         12888     2,992
+     2          8210     2,508
+     3          8140     2,495
+     4          4528     1,850
+     5          1524     1,565
+     6          7984     1,270
+     7           872     1,170
+     8          9915     1,041
+     9          9251       949
+    10          4135       935
+
+── 7. Edge Attribute Check ─────────────────────────────
+  data.edge_attr does NOT exist → ✓ CONFIRMED
+
+── 8. Graph Connectivity ───────────────────────────────
+  Connected components : 314
+  → Multiple components
+
+=================================================================
+WHY BOTH NODE FEATURES AND GRAPH STRUCTURE ARE NECESSARY:
+=================================================================
+
+  Node features alone (BoW from reviews): words like 'DDR4' and 'SATA'
+  appear in both laptop AND desktop reviews — features are ambiguous across
+  product categories. A feature-only MLP cannot disambiguate.
+
+  Graph structure alone: a product with no review text cannot be classified
+  from connectivity alone if its neighbours are equally ambiguous.
+
+  Together: a generic 'Carrying Case' with ambiguous reviews is co-purchased
+  with laptops → GNN assigns it to Computer Accessories. The same case
+  co-purchased with cameras → Photo Accessories. Structure resolves ambiguity
+  that features cannot, and features identify technical specs that structure
+  cannot. Both are necessary and complementary.

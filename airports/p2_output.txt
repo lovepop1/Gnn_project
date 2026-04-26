@@ -1,0 +1,116 @@
+device: cuda
+Splits: {'train': 833, 'val': 179, 'test': 178}
+Degree heuristic test: {'mse': 0.7134831547737122, 'mae': 0.6123595237731934, 'acc': np.float64(0.43820224719101125), 'kappa': np.float64(0.6318121111436854), 'f1': 0.4455699929197914}
+
+=== Tuning GAT ===
+cfg: lr=0.001, dropout=0.0, embed_dim=32 -> val_MSE=1.171300
+cfg: lr=0.001, dropout=0.0, embed_dim=64 -> val_MSE=0.993776
+cfg: lr=0.001, dropout=0.3, embed_dim=32 -> val_MSE=1.290106
+cfg: lr=0.001, dropout=0.3, embed_dim=64 -> val_MSE=1.129989
+cfg: lr=0.005, dropout=0.0, embed_dim=32 -> val_MSE=0.957417
+cfg: lr=0.005, dropout=0.0, embed_dim=64 -> val_MSE=0.946500
+cfg: lr=0.005, dropout=0.3, embed_dim=32 -> val_MSE=0.973565
+cfg: lr=0.005, dropout=0.3, embed_dim=64 -> val_MSE=1.044753
+Top-3 configs for GAT
+| Rank | lr | dropout | embed_dim | Val MSE (75 ep) |
+| 1 | 0.005 | 0.0 | 64 | 0.946500 |
+| 2 | 0.005 | 0.0 | 32 | 0.957417 |
+| 3 | 0.005 | 0.3 | 32 | 0.973565 |
+Best config for GAT: lr=0.005, dropout=0.0, embed=64
+
+=== Tuning GraphSAGE ===
+cfg: lr=0.001, dropout=0.0, embed_dim=32 -> val_MSE=1.232651
+cfg: lr=0.001, dropout=0.0, embed_dim=64 -> val_MSE=1.170522
+cfg: lr=0.001, dropout=0.3, embed_dim=32 -> val_MSE=1.273417
+cfg: lr=0.001, dropout=0.3, embed_dim=64 -> val_MSE=1.198231
+cfg: lr=0.005, dropout=0.0, embed_dim=32 -> val_MSE=0.980882
+cfg: lr=0.005, dropout=0.0, embed_dim=64 -> val_MSE=1.162956
+cfg: lr=0.005, dropout=0.3, embed_dim=32 -> val_MSE=0.934217
+cfg: lr=0.005, dropout=0.3, embed_dim=64 -> val_MSE=1.151443
+Top-3 configs for GraphSAGE
+| Rank | lr | dropout | embed_dim | Val MSE (75 ep) |
+| 1 | 0.005 | 0.3 | 32 | 0.934217 |
+| 2 | 0.005 | 0.0 | 32 | 0.980882 |
+| 3 | 0.005 | 0.3 | 64 | 1.151443 |
+Best config for GraphSAGE: lr=0.005, dropout=0.3, embed=32
+
+=== Tuning GIN ===
+cfg: lr=0.001, dropout=0.0, embed_dim=32 -> val_MSE=1.848323
+cfg: lr=0.001, dropout=0.0, embed_dim=64 -> val_MSE=1.873080
+cfg: lr=0.001, dropout=0.3, embed_dim=32 -> val_MSE=1.905496
+cfg: lr=0.001, dropout=0.3, embed_dim=64 -> val_MSE=1.964415
+cfg: lr=0.005, dropout=0.0, embed_dim=32 -> val_MSE=0.641106
+cfg: lr=0.005, dropout=0.0, embed_dim=64 -> val_MSE=0.613900
+cfg: lr=0.005, dropout=0.3, embed_dim=32 -> val_MSE=0.617063
+cfg: lr=0.005, dropout=0.3, embed_dim=64 -> val_MSE=0.699597
+Top-3 configs for GIN
+| Rank | lr | dropout | embed_dim | Val MSE (75 ep) |
+| 1 | 0.005 | 0.0 | 64 | 0.613900 |
+| 2 | 0.005 | 0.3 | 32 | 0.617063 |
+| 3 | 0.005 | 0.0 | 32 | 0.641106 |
+Best config for GIN: lr=0.005, dropout=0.0, embed=64
+
+--- Training GAT Ordinal (300ep) ---
+GAT ordinal epoch 50/300 val_mse=0.868601
+GAT ordinal epoch 100/300 val_mse=1.024231
+GAT ordinal epoch 150/300 val_mse=1.255758
+GAT ordinal epoch 200/300 val_mse=1.413087
+GAT ordinal epoch 250/300 val_mse=1.550487
+GAT ordinal epoch 300/300 val_mse=1.647419
+
+--- Training GAT Classification (300ep) ---
+GAT cls epoch 50/300 val_mse=1.044693
+GAT cls epoch 100/300 val_mse=1.251397
+GAT cls epoch 150/300 val_mse=1.402235
+GAT cls epoch 200/300 val_mse=1.346369
+GAT cls epoch 250/300 val_mse=1.145251
+GAT cls epoch 300/300 val_mse=1.256983
+
+--- Training GraphSAGE Ordinal (300ep) ---
+GraphSAGE ordinal epoch 50/300 val_mse=0.921628
+GraphSAGE ordinal epoch 100/300 val_mse=0.973655
+GraphSAGE ordinal epoch 150/300 val_mse=1.061344
+GraphSAGE ordinal epoch 200/300 val_mse=1.097567
+GraphSAGE ordinal epoch 250/300 val_mse=1.149450
+GraphSAGE ordinal epoch 300/300 val_mse=1.169061
+
+--- Training GraphSAGE Classification (300ep) ---
+GraphSAGE cls epoch 50/300 val_mse=1.016760
+GraphSAGE cls epoch 100/300 val_mse=1.022346
+GraphSAGE cls epoch 150/300 val_mse=1.044693
+GraphSAGE cls epoch 200/300 val_mse=1.111732
+GraphSAGE cls epoch 250/300 val_mse=1.145251
+GraphSAGE cls epoch 300/300 val_mse=1.128492
+
+--- Training GIN Ordinal (300ep) ---
+GIN ordinal epoch 50/300 val_mse=0.821135
+GIN ordinal epoch 100/300 val_mse=0.637012
+GIN ordinal epoch 150/300 val_mse=0.757076
+GIN ordinal epoch 200/300 val_mse=0.970316
+GIN ordinal epoch 250/300 val_mse=1.135913
+GIN ordinal epoch 300/300 val_mse=1.205345
+
+--- Training GIN Classification (300ep) ---
+GIN cls epoch 50/300 val_mse=0.832402
+GIN cls epoch 100/300 val_mse=0.754190
+GIN cls epoch 150/300 val_mse=0.916201
+GIN cls epoch 200/300 val_mse=0.972067
+GIN cls epoch 250/300 val_mse=0.983240
+GIN cls epoch 300/300 val_mse=0.983240
+
+=== MASTER TABLE ===
+| Model+Formulation              | Best Config | MSE | MAE | Acc | Kappa | F1 | Time |
+|-------------------------------|-------------|-----|-----|-----|-------|----|------|
+| Degree heuristic              | —           | 0.713483 | 0.612360 | 0.438202 | 0.631812 | 0.445570 | — |
+| GAT — Ordinal                 | lr=0.005, d=0.0, embed=64 | 1.009938 | 0.777076 | 0.443820 | 0.506867 | 0.448805 | 2.1553523540496826 |
+| GAT — Classification          | lr=0.005, d=0.0, embed=64 | 1.353933 | 0.769663 | 0.471910 | 0.448796 | 0.467864 | 2.8938679695129395 |
+| GraphSAGE — Ordinal           | lr=0.005, d=0.3, embed=32 | 1.088837 | 0.853007 | 0.342697 | 0.377325 | 0.330306 | 1.2741708755493164 |
+| GraphSAGE — Classification    | lr=0.005, d=0.3, embed=32 | 1.404494 | 0.808989 | 0.432584 | 0.453317 | 0.427338 | 1.475592851638794 |
+| GIN — Ordinal                 | lr=0.005, d=0.0, embed=64 | 0.644287 | 0.640971 | 0.455056 | 0.575762 | 0.430529 | 1.4031424522399902 |
+| GIN — Classification          | lr=0.005, d=0.0, embed=64 | 1.084270 | 0.679775 | 0.500000 | 0.580773 | 0.495013 | 1.5032751560211182 |
+Saved figures: airports_ordinal_curves.png, airports_cls_curves.png
+
+Done. Key outputs:
+- results.json
+- airports_{gat|sage|gin}_{ordinal|cls}_best.pt
+- airports_ordinal_curves.png, airports_cls_curves.png

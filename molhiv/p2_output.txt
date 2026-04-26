@@ -1,0 +1,85 @@
+Python version: 3.12.12
+PyTorch version: 2.10.0+cu128
+torch_geometric version: 2.7.0
+CUDA available: True
+
+PROJECT REQUIREMENT — MILESTONE 2:
+All 3 GNN architectures trained on OGBG-MOLHIV with hyperparameter tuning.
+GraphSAGE intentionally receives no bond edge features — structural-only control.
+
+# ARCHITECTURE RATIONALE (Milestone 2 — Model Selection):
+# GAT  — attention-weighted aggregation. Subsumes GCN and adds selective neighbour weighting.
+# GraphSAGE — inductive mean aggregation; explicit no-edge-feature control on MOLHIV.
+# GIN  — sum aggregator; most expressive per Weisfeiler-Lehman test.
+
+Using device: cuda
+
+========================================
+Hyperparameter Tuning for GIN
+========================================
+Config 1/8 [lr=0.0001, layers=3, batch=32] -> Val ROC-AUC: 0.7991
+Config 2/8 [lr=0.0001, layers=3, batch=64] -> Val ROC-AUC: 0.8058
+Config 3/8 [lr=0.0001, layers=5, batch=32] -> Val ROC-AUC: 0.8097
+Config 4/8 [lr=0.0001, layers=5, batch=64] -> Val ROC-AUC: 0.7985
+Config 5/8 [lr=0.001, layers=3, batch=32] -> Val ROC-AUC: 0.8208
+Config 6/8 [lr=0.001, layers=3, batch=64] -> Val ROC-AUC: 0.8102
+Config 7/8 [lr=0.001, layers=5, batch=32] -> Val ROC-AUC: 0.8217
+Config 8/8 [lr=0.001, layers=5, batch=64] -> Val ROC-AUC: 0.8163
+
+Top-3 Configs for GIN:
+| Rank | lr     | num_layers | batch_size | Val ROC-AUC (30 ep) |
+| 1    | 0.001  | 5          | 32         | 0.8217              |
+| 2    | 0.001  | 3          | 32         | 0.8208              |
+| 3    | 0.001  | 5          | 64         | 0.8163              |
+
+*** Best config for GIN: lr=0.001, layers=5, batch=32 ***
+Retraining GIN with best config for 100 epochs...
+
+========================================
+Hyperparameter Tuning for GAT
+========================================
+Config 1/8 [lr=0.0001, layers=3, batch=32] -> Val ROC-AUC: 0.8051
+Config 2/8 [lr=0.0001, layers=3, batch=64] -> Val ROC-AUC: 0.8108
+Config 3/8 [lr=0.0001, layers=5, batch=32] -> Val ROC-AUC: 0.8418
+Config 4/8 [lr=0.0001, layers=5, batch=64] -> Val ROC-AUC: 0.8196
+Config 5/8 [lr=0.001, layers=3, batch=32] -> Val ROC-AUC: 0.7982
+Config 6/8 [lr=0.001, layers=3, batch=64] -> Val ROC-AUC: 0.8120
+Config 7/8 [lr=0.001, layers=5, batch=32] -> Val ROC-AUC: 0.7629
+Config 8/8 [lr=0.001, layers=5, batch=64] -> Val ROC-AUC: 0.7927
+
+Top-3 Configs for GAT:
+| Rank | lr     | num_layers | batch_size | Val ROC-AUC (30 ep) |
+| 1    | 0.0001 | 5          | 32         | 0.8418              |
+| 2    | 0.0001 | 5          | 64         | 0.8196              |
+| 3    | 0.001  | 3          | 64         | 0.8120              |
+
+*** Best config for GAT: lr=0.0001, layers=5, batch=32 ***
+Retraining GAT with best config for 100 epochs...
+
+========================================
+Hyperparameter Tuning for GraphSAGE
+========================================
+Config 1/8 [lr=0.0001, layers=3, batch=32] -> Val ROC-AUC: 0.8115
+Config 2/8 [lr=0.0001, layers=3, batch=64] -> Val ROC-AUC: 0.8044
+Config 3/8 [lr=0.0001, layers=5, batch=32] -> Val ROC-AUC: 0.8216
+Config 4/8 [lr=0.0001, layers=5, batch=64] -> Val ROC-AUC: 0.8123
+Config 5/8 [lr=0.001, layers=3, batch=32] -> Val ROC-AUC: 0.8174
+Config 6/8 [lr=0.001, layers=3, batch=64] -> Val ROC-AUC: 0.8332
+Config 7/8 [lr=0.001, layers=5, batch=32] -> Val ROC-AUC: 0.8143
+Config 8/8 [lr=0.001, layers=5, batch=64] -> Val ROC-AUC: 0.7991
+
+Top-3 Configs for GraphSAGE:
+| Rank | lr     | num_layers | batch_size | Val ROC-AUC (30 ep) |
+| 1    | 0.001  | 3          | 64         | 0.8332              |
+| 2    | 0.0001 | 5          | 32         | 0.8216              |
+| 3    | 0.001  | 3          | 32         | 0.8174              |
+
+*** Best config for GraphSAGE: lr=0.001, layers=3, batch=64 ***
+Retraining GraphSAGE with best config for 100 epochs...
+
+Final Results Summary:
+| Model     | Best Config (lr/layers/batch) | Best Val ROC | Test ROC | Precision | Recall | F1   | Time(s) |
+|-----------|-------------------------------|-------------|----------|-----------|--------|------|---------|
+| GIN       | 0.001/5/32                    | 0.8281      | 0.7503   | 0.0719    | 0.7077 | 0.1306 | 1182.09  |
+| GAT       | 0.0001/5/32                   | 0.8154      | 0.7734   | 0.1004    | 0.6308 | 0.1732 | 2076.40  |
+| GraphSAGE | 0.001/3/64                    | 0.8395      | 0.7777   | 0.1355    | 0.5077 | 0.2139 | 474.91  |

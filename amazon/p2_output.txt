@@ -1,0 +1,77 @@
+=================================================================
+MILESTONE 2 — Hyperparameter Tuning & Model Comparison
+=================================================================
+
+── Best Configs (from grid search) ─────────────────────
+  MLP     : —
+  GAT     : lr=0.01,d=0.3,h=256
+  SAGE    : lr=0.01,d=0.3,h=256
+  GIN     : lr=0.001,d=0.3,h=256
+
+── Grid Search — 8 combinations per GNN model ──────────
+  learning_rate : [0.001, 0.01]
+  dropout       : [0.3, 0.5]
+  hidden_dim    : [128, 256]
+  Each combo: 50 epochs; winner retrained for 200 epochs.
+
+── Master Comparison Table ──────────────────────────────
+  Model              |         Best Config          |  Val Acc |  Test Acc |  Macro F1 |  Time(s)
+  ───────────────────────────────────────────────────────────────────────────────────────────────
+  MLP (no graph)     |              —               |   0.8615 |    0.8455 |    0.8003 |      2.8
+  GAT                |     lr=0.01,d=0.3,h=256      |   0.9149 |    0.9099 |    0.9020 |     15.0
+  GraphSAGE          |     lr=0.01,d=0.3,h=256      |   0.9120 |    0.9080 |    0.8948 |     17.9
+  GIN                |     lr=0.001,d=0.3,h=256     |   0.8705 |    0.8826 |    0.8651 |     18.9
+
+── Architecture Rationale ───────────────────────────────
+  GAT   — attention-weighted aggregation. Subsumes GCN (uniform
+          attention = GCN) while adding selective neighbour weighting.
+          GCN is therefore redundant and omitted.
+  SAGE  — inductive mean aggregation; handles variable-degree nodes
+          robustly; explicit control without edge features.
+  GIN   — sum aggregator; most expressive per Weisfeiler-Lehman test;
+          distinguishes neighbourhood multisets precisely.
+
+── Stratified Split (60/20/20, seed=42) ────────────────
+  Confirmed: class distribution proportional across all splits.
+  train_mask / val_mask / test_mask created and verified.
+
+── MLP Baseline ─────────────────────────────────────────
+  Architecture : Linear(767,256)→ReLU→Dropout(0.5)→Linear(256,10)
+  Test Acc     : 0.8455
+  Macro F1     : 0.8003
+  Purpose      : lower bound — quantifies what graph structure adds
+
+
+── results.json snapshot ──
+{
+  "amazon": {
+    "MLP": {
+      "best_cfg": "\u2014",
+      "val_acc": 0.8615,
+      "test_acc": 0.8455,
+      "f1": 0.8003,
+      "time": 2.76
+    },
+    "GAT": {
+      "best_cfg": "lr=0.01,d=0.3,h=256",
+      "val_acc": 0.9149,
+      "test_acc": 0.9099,
+      "f1": 0.902,
+      "time": 14.98
+    },
+    "SAGE": {
+      "best_cfg": "lr=0.01,d=0.3,h=256",
+      "val_acc": 0.912,
+      "test_acc": 0.908,
+      "f1": 0.8948,
+      "time": 17.94
+    },
+    "GIN": {
+      "best_cfg": "lr=0.001,d=0.3,h=256",
+      "val_acc": 0.8705,
+      "test_acc": 0.8826,
+      "f1": 0.8651,
+      "time": 18.92
+    }
+  }
+}

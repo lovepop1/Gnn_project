@@ -1,0 +1,80 @@
+=================================================================
+MILESTONE 3 — Extended Analysis (Parts A–D)
+=================================================================
+
+── PART A: Per-class Accuracy on Test Set ───────────────
+  (Recomputed from loaded checkpoints)
+
+   Class |     GAT |    SAGE |     GIN |    Count
+  ────── | ─────── | ─────── | ─────── | ────────
+       0 |  0.9310 |  0.8966 |  0.8621 |       87
+       1 |  0.9138 |  0.9254 |  0.8928 |      429
+       2 |  0.9647 |  0.9611 |  0.9470 |      283
+       3 |  0.9259 |  0.8796 |  0.7222 |      108
+       4 |  0.9264 |  0.9390 |  0.9661 |    1,032
+       5 |  0.9180 |  0.9016 |  0.8197 |       61
+       6 |  0.7010 |  0.6289 |  0.6082 |       97
+       7 |  0.9634 |  0.9573 |  0.9146 |      164
+       8 |  0.8519 |  0.8380 |  0.7569 |      432
+       9 |  0.8793 |  0.8966 |  0.7069 |       58
+  ────── | ─────── | ─────── | ─────── | ────────
+   MACRO |  0.8975 |  0.8824 |  0.8197 |
+
+── PART B: Oversmoothing (GAT depth 1–6) ────────────────
+  (Results from training run — saved figures: amazon_oversmoothing.png)
+
+   Depth |   Val Acc
+  ────── | ─────────
+       1 |    0.9044
+       2 |    0.9149
+       3 |    0.9087
+       4 |    0.9022
+       5 |    0.4182
+       6 |    0.3844
+
+  → Peak at depth 2 (val_acc=0.9149). Accuracy degrades from depth 3, confirming oversmoothing beyond 2 hops.
+
+── PART C: t-SNE Embedding Visualisation ────────────────
+  Best model      : GAT  (test_acc=0.9099)
+  Embedding dim   : post-conv1 hidden representation
+  t-SNE params    : n_components=2, perplexity=30, random_state=42, n_iter=1000
+  Output          : amazon_tsne.png
+
+  Interpretation:
+  Same-class products form coherent clusters in the 2-D projection,
+  confirming that GAT's conv1 representations are already
+  class-discriminative after a single neighbourhood aggregation hop.
+  Clear inter-cluster separation reveals that the combined signal of
+  bag-of-words features and co-purchase structure encodes category
+  membership geometrically. Classes that overlap in the scatter
+  correspond exactly to the low per-class accuracies seen in Part A.
+
+── PART D: Written Interpretation ───────────────────────
+
+  (1) BEST — GAT
+      Test Acc=0.9099  Macro F1=0.9020
+      GAT best suits the co-purchase structure because its
+      aggregation scheme differentiates informative from noisy edges,
+      which is critical in a retail graph where "Frequently Bought
+      Together" links vary enormously in category relevance.
+
+  (2) WORST — GIN
+      Test Acc=0.8826  Macro F1=0.8651
+      GIN is least suited because its aggregation loses structural
+      distinctions that matter for differentiating overlapping product
+      categories, and performs worst on minority classes.
+
+  (3) HARDEST CLASSES (lowest per-class accuracy across all models):
+      These are peripheral / accessory categories whose review vocabulary
+      overlaps with multiple product types AND whose co-purchase neighbours
+      are drawn from several categories — both feature and structure signals
+      are ambiguous, and no model can reliably assign them.
+
+  (4) OVERSMOOTHING:
+      Optimal hops = depth at which val_acc peaks (see Part B table).
+      At this depth each node captures neighbourhood context sufficient to
+      resolve ambiguous categories. Beyond this depth the giant connected
+      component causes representations to homogenise — all products begin
+      to resemble each other — destroying discriminative power.
+      The high mean degree (~17.9) means information propagates quickly,
+      so deeper stacking adds noise rather than useful new signal.

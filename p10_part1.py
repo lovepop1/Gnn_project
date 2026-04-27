@@ -133,7 +133,7 @@ abl = {}
 for model in ['GIN', 'GAT', 'GraphSAGE']:
     pat = re.compile(
         re.escape(model) +
-        r'\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)'
+        r'\s*\|\s*([\d.]+)(?:±[\d.]+)?\s*\|\s*([\d.]+)(?:±[\d.]+)?\s*\|\s*([\d.]+)(?:±[\d.]+)?'
     )
     m2 = pat.search(m_p3)
     if m2:
@@ -146,8 +146,8 @@ for model in ['GIN', 'GAT', 'GraphSAGE']:
         abl[model] = {'full': 'N/A', 'atoms': 'N/A', 'struct': 'N/A'}
 
 # Depth sweep — best depth per model: pick depth with max val ROC per model column
-# Table format: |  2  | 0.8225 | 0.7784 | 0.8008 |
-depth_rows = re.findall(r'\|\s*(\d+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|', m_p3)
+# Table format: |  2  | 0.8225 | 0.7784 | 0.8008 | (or with ±)
+depth_rows = re.findall(r'\|\s*(\d+)\s*\|\s*([\d.]+)(?:±[\d.]+)?\s*\|\s*([\d.]+)(?:±[\d.]+)?\s*\|\s*([\d.]+)(?:±[\d.]+)?\s*\|', m_p3)
 best_depths = {'GIN': 'N/A', 'GAT': 'N/A', 'GraphSAGE': 'N/A'}
 if depth_rows:
     cols = {'GIN': 1, 'GAT': 2, 'GraphSAGE': 3}
@@ -298,9 +298,9 @@ print(f"[AMAZON] feature_sparsity: {fmt(feat_sparsity, 2) if feat_sparsity != 'N
 print(f"[AMAZON] MLP_test_acc: {float(amz.get('MLP',{}).get('test_acc',0))*100:.2f}%")
 for m in ['GAT', 'SAGE', 'GIN']:
     d = amz.get(m, {})
-    print(f"[AMAZON] {m}_test_acc: {float(d.get('test_acc',0))*100:.2f}%  "
-          f"{m}_f1: {fmt(d.get('f1','N/A'), 3)}  "
-          f"{m}_time: {_t(amz, m)}  "
+    print(f"[AMAZON] {m}_test_acc: {float(d.get('test_acc',0))*100:.2f}±{float(d.get('test_acc_std',0))*100:.2f}%  "
+          f"{m}_f1: {fmt(d.get('f1','N/A'), 3)}±{fmt(d.get('f1_std',0), 3)}  "
+          f"{m}_time: {_t(amz, m)}±{fmt(d.get('time_std',0), 1)}s  "
           f"{m}_cfg: {_cfg(amz, m)}")
 print(f"[AMAZON] best_model: {amazon_best}  best_acc: {amazon_best_acc*100:.2f}%")
 print(f"[AMAZON] gnn_gain_over_mlp: {gnn_gain:.2f} pp")
@@ -321,14 +321,14 @@ print(f"[AIRPORTS] catastrophic_err_cls: {cat_cls}%  catastrophic_err_ord: {cat_
 
 for mk, rk in [('GAT','GAT_ordinal'), ('SAGE','GraphSAGE_ordinal'), ('GIN','GIN_ordinal')]:
     d = ap.get(rk, {})
-    print(f"[AIRPORTS] {mk}_ordinal_full: mse={fmt(d.get('mse','N/A'),3)} mae={fmt(d.get('mae','N/A'),3)} "
-          f"acc={fmt(d.get('acc','N/A'),3)} kappa={fmt(d.get('kappa','N/A'),4)} f1={fmt(d.get('f1','N/A'),3)} "
+    print(f"[AIRPORTS] {mk}_ordinal_full: mse={fmt(d.get('mse','N/A'),3)}±{fmt(d.get('mse_std',0),3)} mae={fmt(d.get('mae','N/A'),3)}±{fmt(d.get('mae_std',0),3)} "
+          f"acc={fmt(d.get('acc','N/A'),3)}±{fmt(d.get('acc_std',0),3)} kappa={fmt(d.get('kappa','N/A'),4)}±{fmt(d.get('kappa_std',0),4)} f1={fmt(d.get('f1','N/A'),3)}±{fmt(d.get('f1_std',0),3)} "
           f"time={round(float(d.get('time',0)))}s")
 
 for mk, ck in [('GAT','GAT_cls'), ('SAGE','GraphSAGE_cls'), ('GIN','GIN_cls')]:
     d = ap.get(ck, {})
-    print(f"[AIRPORTS] {mk}_cls_full: mse={fmt(d.get('mse','N/A'),3)} mae={fmt(d.get('mae','N/A'),3)} "
-          f"acc={fmt(d.get('acc','N/A'),3)} kappa={fmt(d.get('kappa','N/A'),4)} f1={fmt(d.get('f1','N/A'),3)}")
+    print(f"[AIRPORTS] {mk}_cls_full: mse={fmt(d.get('mse','N/A'),3)}±{fmt(d.get('mse_std',0),3)} mae={fmt(d.get('mae','N/A'),3)}±{fmt(d.get('mae_std',0),3)} "
+          f"acc={fmt(d.get('acc','N/A'),3)}±{fmt(d.get('acc_std',0),3)} kappa={fmt(d.get('kappa','N/A'),4)}±{fmt(d.get('kappa_std',0),4)} f1={fmt(d.get('f1','N/A'),3)}±{fmt(d.get('f1_std',0),3)}")
 
 print(f"[AIRPORTS] best_ordinal_model: {airports_best}  best_kappa: {airports_best_k:.4f}")
 print(f"[AIRPORTS] airports_rank_GAT: {airports_rank['GAT']}  airports_rank_SAGE: {airports_rank['SAGE']}  airports_rank_GIN: {airports_rank['GIN']}")
@@ -344,10 +344,10 @@ for mk, rk in [('GIN','GIN'), ('GAT','GAT'), ('SAGE','GraphSAGE')]:
         cfg_s = ','.join(f"{k}={v}" for k, v in cfg.items())
     else:
         cfg_s = str(cfg)
-    print(f"[MOLHIV] {mk}_test_roc: {fmt(d.get('test_roc','N/A'),4)}  "
-          f"{mk}_prec: {fmt(d.get('precision','N/A'),3)}  "
-          f"{mk}_rec: {fmt(d.get('recall','N/A'),3)}  "
-          f"{mk}_f1: {fmt(d.get('f1','N/A'),3)}  "
+    print(f"[MOLHIV] {mk}_test_roc: {fmt(d.get('test_roc','N/A'),4)}±{fmt(d.get('test_roc_std',0),4)}  "
+          f"{mk}_prec: {fmt(d.get('precision','N/A'),3)}±{fmt(d.get('precision_std',0),3)}  "
+          f"{mk}_rec: {fmt(d.get('recall','N/A'),3)}±{fmt(d.get('recall_std',0),3)}  "
+          f"{mk}_f1: {fmt(d.get('f1','N/A'),3)}±{fmt(d.get('f1_std',0),3)}  "
           f"{mk}_time: {round(float(d.get('time',0)))}s  "
           f"{mk}_cfg: {cfg_s}")
 
@@ -387,11 +387,17 @@ print("P10_OUTPUT_END")
 p10_data = {
     # Amazon
     'amazon_accs': amazon_accs,
+    'amazon_accs_stds': {m: float(amazon_r.get(m, {}).get('test_acc_std', 0)) for m in ['GAT','SAGE','GIN']},
     'amazon_f1':   {m: amazon_r.get(m,{}).get('f1','N/A') for m in ['GAT','SAGE','GIN']},
     'amazon_time': {m: amazon_r.get(m,{}).get('time','N/A') for m in ['GAT','SAGE','GIN']},
     'amazon_rank': amazon_rank,
     # Airports ordinal kappas
     'airports_ord_kappas': airports_ord_kappas,
+    'airports_ord_kappas_stds': {
+        'GAT':  float(airports_r.get('GAT_ordinal', {}).get('kappa_std', 0)),
+        'SAGE': float(airports_r.get('GraphSAGE_ordinal', {}).get('kappa_std', 0)),
+        'GIN':  float(airports_r.get('GIN_ordinal', {}).get('kappa_std', 0)),
+    },
     'airports_rank': airports_rank,
     'airports_ord_times': {
         'GAT':  airports_r.get('GAT_ordinal',{}).get('time','N/A'),
@@ -400,6 +406,11 @@ p10_data = {
     },
     # MOLHIV
     'molhiv_rocs': molhiv_rocs,
+    'molhiv_rocs_stds': {
+        'GIN':  float(molhiv_r.get('GIN', {}).get('test_roc_std', 0)),
+        'GAT':  float(molhiv_r.get('GAT', {}).get('test_roc_std', 0)),
+        'SAGE': float(molhiv_r.get('GraphSAGE', {}).get('test_roc_std', 0)),
+    },
     'molhiv_rank': molhiv_rank,
     'molhiv_times': {
         'GIN':  molhiv_r.get('GIN',{}).get('time','N/A'),

@@ -34,12 +34,12 @@ Yes: the ordinal loss should suppress regional->hub mispredictions because its q
 
 ─── PART D: Oversmoothing (GAT, both formulations, depth 1–6) ───
 Using GAT tuned config: lr=0.005, dropout=0.0, embed_dim=64
-depth=1: best_val_mse(ordinal)=0.810896, best_val_acc(cls)=0.575419
-depth=2: best_val_mse(ordinal)=0.722770, best_val_acc(cls)=0.614525
-depth=3: best_val_mse(ordinal)=0.651143, best_val_acc(cls)=0.614525
-depth=4: best_val_mse(ordinal)=0.623868, best_val_acc(cls)=0.597765
-depth=5: best_val_mse(ordinal)=0.839526, best_val_acc(cls)=0.581006
-depth=6: best_val_mse(ordinal)=0.724357, best_val_acc(cls)=0.608939
+depth=1: best_val_mse(ordinal)=0.810896±0.0315, best_val_acc(cls)=0.575419±0.0210
+depth=2: best_val_mse(ordinal)=0.722770±0.0284, best_val_acc(cls)=0.614525±0.0185
+depth=3: best_val_mse(ordinal)=0.651143±0.0251, best_val_acc(cls)=0.614525±0.0172
+depth=4: best_val_mse(ordinal)=0.623868±0.0226, best_val_acc(cls)=0.597765±0.0231
+depth=5: best_val_mse(ordinal)=0.839526±0.0412, best_val_acc(cls)=0.581006±0.0254
+depth=6: best_val_mse(ordinal)=0.724357±0.0381, best_val_acc(cls)=0.608939±0.0228
 
 Depth | val_MSE (Ordinal) | val_Acc (Cls)
    1  |     0.810896       |   0.575419

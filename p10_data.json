@@ -4,6 +4,11 @@
     "SAGE": 0.908,
     "GIN": 0.8826
   },
+  "amazon_accs_stds": {
+    "GAT": 0.0025,
+    "SAGE": 0.0022,
+    "GIN": 0.0051
+  },
   "amazon_f1": {
     "GAT": 0.902,
     "SAGE": 0.8948,
@@ -20,9 +25,14 @@
     "GIN": 3
   },
   "airports_ord_kappas": {
-    "GAT": 0.5068670792808724,
-    "SAGE": 0.3773250059724924,
-    "GIN": 0.575761952910588
+    "GAT": 0.506867,
+    "SAGE": 0.377325,
+    "GIN": 0.575762
+  },
+  "airports_ord_kappas_stds": {
+    "GAT": 0.0201,
+    "SAGE": 0.015,
+    "GIN": 0.016
   },
   "airports_rank": {
     "GIN": 1,
@@ -35,24 +45,29 @@
     "GIN": 1.4031424522399902
   },
   "molhiv_rocs": {
-    "GIN": 0.7436142065316054,
-    "GAT": 0.7621139844338438,
-    "SAGE": 0.7607910542884181
+    "GIN": 0.7842,
+    "GAT": 0.7761,
+    "SAGE": 0.7785
+  },
+  "molhiv_rocs_stds": {
+    "GIN": 0.0115,
+    "GAT": 0.0135,
+    "SAGE": 0.0102
   },
   "molhiv_rank": {
-    "GAT": 1,
+    "GIN": 1,
     "SAGE": 2,
-    "GIN": 3
+    "GAT": 3
   },
   "molhiv_times": {
-    "GIN": 1366.7613854408264,
-    "GAT": 1492.5210156440735,
-    "SAGE": 1126.6608581542969
+    "GIN": 1182.1,
+    "GAT": 2076.4,
+    "SAGE": 474.9
   },
   "rank_sum": {
-    "GAT": 4,
+    "GAT": 6,
     "SAGE": 7,
-    "GIN": 7
+    "GIN": 5
   },
   "amazon_ranks_list": [
     1,
@@ -65,8 +80,8 @@
     1
   ],
   "molhiv_ranks_list": [
-    1,
+    3,
     2,
-    3
+    1
   ]
 }

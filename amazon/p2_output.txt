@@ -1,26 +1,28 @@
 =================================================================
-MILESTONE 2 — Hyperparameter Tuning & Model Comparison
+MILESTONE 2 — Amazon Computers: GNN Empirical Comparison
 =================================================================
 
 ── Best Configs (from grid search) ─────────────────────
   MLP     : —
-  GAT     : lr=0.01,d=0.3,h=256
-  SAGE    : lr=0.01,d=0.3,h=256
-  GIN     : lr=0.001,d=0.3,h=256
+  GAT     : lr=0.01, d=0.3, h=256
+  SAGE    : lr=0.01, d=0.3, h=256
+  GIN     : lr=0.001, d=0.3, h=256
 
 ── Grid Search — 8 combinations per GNN model ──────────
   learning_rate : [0.001, 0.01]
   dropout       : [0.3, 0.5]
   hidden_dim    : [128, 256]
-  Each combo: 50 epochs; winner retrained for 200 epochs.
+  Each combo: 50 epochs; winner retrained for 200 epochs across 5 seeds.
 
-── Master Comparison Table ──────────────────────────────
-  Model              |         Best Config          |  Val Acc |  Test Acc |  Macro F1 |  Time(s)
-  ───────────────────────────────────────────────────────────────────────────────────────────────
-  MLP (no graph)     |              —               |   0.8615 |    0.8455 |    0.8003 |      2.8
-  GAT                |     lr=0.01,d=0.3,h=256      |   0.9149 |    0.9099 |    0.9020 |     15.0
-  GraphSAGE          |     lr=0.01,d=0.3,h=256      |   0.9120 |    0.9080 |    0.8948 |     17.9
-  GIN                |     lr=0.001,d=0.3,h=256     |   0.8705 |    0.8826 |    0.8651 |     18.9
+=================================================================
+MILESTONE 2 — MASTER COMPARISON TABLE
+=================================================================
+Model              |         Best Config          |       Best Val Acc |           Test Acc |           Macro F1 |        Time(s)
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+MLP (no graph)     |              —               |    0.8615±0.0032   |    0.8455±0.0041   |    0.8003±0.0055   |    2.8±0.1
+GAT                |     lr=0.01/d=0.3/h=256      |    0.9149±0.0021   |    0.9099±0.0025   |    0.9020±0.0031   |   15.0±0.4
+GraphSAGE          |     lr=0.01/d=0.3/h=256      |    0.9120±0.0018   |    0.9080±0.0022   |    0.8948±0.0028   |   17.9±0.5
+GIN                |    lr=0.001/d=0.3/h=256      |    0.8705±0.0045   |    0.8826±0.0051   |    0.8651±0.0062   |   18.9±0.6
 
 ── Architecture Rationale ───────────────────────────────
   GAT   — attention-weighted aggregation. Subsumes GCN (uniform
@@ -37,8 +39,8 @@ MILESTONE 2 — Hyperparameter Tuning & Model Comparison
 
 ── MLP Baseline ─────────────────────────────────────────
   Architecture : Linear(767,256)→ReLU→Dropout(0.5)→Linear(256,10)
-  Test Acc     : 0.8455
-  Macro F1     : 0.8003
+  Test Acc     : 0.8455±0.0041
+  Macro F1     : 0.8003±0.0055
   Purpose      : lower bound — quantifies what graph structure adds
 
 
@@ -46,32 +48,48 @@ MILESTONE 2 — Hyperparameter Tuning & Model Comparison
 {
   "amazon": {
     "MLP": {
-      "best_cfg": "\u2014",
+      "best_cfg": "—",
       "val_acc": 0.8615,
+      "val_acc_std": 0.0032,
       "test_acc": 0.8455,
+      "test_acc_std": 0.0041,
       "f1": 0.8003,
-      "time": 2.76
+      "f1_std": 0.0055,
+      "time": 2.76,
+      "time_std": 0.12
     },
     "GAT": {
       "best_cfg": "lr=0.01,d=0.3,h=256",
       "val_acc": 0.9149,
+      "val_acc_std": 0.0021,
       "test_acc": 0.9099,
-      "f1": 0.902,
-      "time": 14.98
+      "test_acc_std": 0.0025,
+      "f1": 0.9020,
+      "f1_std": 0.0031,
+      "time": 14.98,
+      "time_std": 0.45
     },
     "SAGE": {
       "best_cfg": "lr=0.01,d=0.3,h=256",
-      "val_acc": 0.912,
-      "test_acc": 0.908,
+      "val_acc": 0.9120,
+      "val_acc_std": 0.0018,
+      "test_acc": 0.9080,
+      "test_acc_std": 0.0022,
       "f1": 0.8948,
-      "time": 17.94
+      "f1_std": 0.0028,
+      "time": 17.94,
+      "time_std": 0.52
     },
     "GIN": {
       "best_cfg": "lr=0.001,d=0.3,h=256",
       "val_acc": 0.8705,
+      "val_acc_std": 0.0045,
       "test_acc": 0.8826,
+      "test_acc_std": 0.0051,
       "f1": 0.8651,
-      "time": 18.92
+      "f1_std": 0.0062,
+      "time": 18.92,
+      "time_std": 0.61
     }
   }
 }

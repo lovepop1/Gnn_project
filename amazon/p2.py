@@ -232,57 +232,84 @@ def full_train(model_cls, cfg, checkpoint_path, model_label,
     dropout = fixed_dropout if fixed_dropout is not None else cfg['dropout']
     hidden  = fixed_hidden  if fixed_hidden  is not None else cfg['hidden']
 
-    torch.manual_seed(42)
-    if model_cls.__name__ == 'MLP':
-        model = model_cls().to(device)
-    else:
-        model = model_cls(dropout, hidden).to(device)
+    seeds = [42, 123, 456, 789, 999]
+    all_best_val = []
+    all_test_acc = []
+    all_f1 = []
+    all_time = []
+    first_train_losses = []
+    first_val_accs = []
+    
+    for i, current_seed in enumerate(seeds):
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
 
-    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
+        if model_cls.__name__ == 'MLP':
+            model = model_cls().to(device)
+        else:
+            model = model_cls(dropout, hidden).to(device)
 
-    train_losses, val_accs = [], []
-    best_val, best_val_ep  = 0.0, 0
+        opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
 
-    start = time.time()
-    for epoch in range(200):
-        model.train()
-        opt.zero_grad()
-        out  = model(data.x, data.edge_index)
-        loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
-        loss.backward()
-        opt.step()
+        train_losses, val_accs = [], []
+        best_val, best_val_ep  = 0.0, 0
 
-        va, _ = evaluate(model, data, data.val_mask)
-        train_losses.append(loss.item())
-        val_accs.append(va)
+        start = time.time()
+        for epoch in range(200):
+            model.train()
+            opt.zero_grad()
+            out  = model(data.x, data.edge_index)
+            loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
+            loss.backward()
+            opt.step()
 
-        if va > best_val:
-            best_val = va
-            best_val_ep = epoch
-            torch.save(model.state_dict(), checkpoint_path)
+            va, _ = evaluate(model, data, data.val_mask)
+            train_losses.append(loss.item())
+            val_accs.append(va)
 
-        if (epoch + 1) % 50 == 0:
-            print(f"  [{model_label}] Epoch {epoch+1:3d}/200 | "
-                  f"loss={loss.item():.4f} | val_acc={va:.4f} | "
-                  f"best={best_val:.4f} (ep {best_val_ep+1})")
+            if va > best_val:
+                best_val = va
+                best_val_ep = epoch
+                torch.save(model.state_dict(), checkpoint_path.replace('.pt', f'_{current_seed}.pt'))
 
-    elapsed = time.time() - start
+        elapsed = time.time() - start
 
-    # Load best checkpoint & evaluate test
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    test_acc, test_f1 = evaluate(model, data, data.test_mask)
+        # Load best checkpoint & evaluate test
+        model.load_state_dict(torch.load(checkpoint_path.replace('.pt', f'_{current_seed}.pt'), map_location=device))
+        test_acc, test_f1 = evaluate(model, data, data.test_mask)
 
-    print(f"\n  ✓ {model_label} done | best_val={best_val:.4f} | "
-          f"test_acc={test_acc:.4f} | macro_f1={test_f1:.4f} | "
-          f"time={elapsed:.1f}s")
+        all_best_val.append(best_val)
+        all_test_acc.append(test_acc)
+        all_f1.append(test_f1)
+        all_time.append(elapsed)
+        
+        if i == 0:
+            first_train_losses = train_losses
+            first_val_accs = val_accs
+
+    mean_best_val = np.mean(all_best_val)
+    mean_test_acc = np.mean(all_test_acc)
+    mean_f1       = np.mean(all_f1)
+    mean_time     = np.mean(all_time)
+    
+    std_best_val = np.std(all_best_val)
+    std_test_acc = np.std(all_test_acc)
+    std_f1       = np.std(all_f1)
+    std_time     = np.std(all_time)
+
+    print(f"\n  ✓ {model_label} done (5 seeds) | best_val={mean_best_val:.4f}±{std_best_val:.4f} | "
+          f"test_acc={mean_test_acc:.4f}±{std_test_acc:.4f} | macro_f1={mean_f1:.4f}±{std_f1:.4f} | "
+          f"time={mean_time:.1f}±{std_time:.1f}s")
 
     return {
-        'best_val':    best_val,
-        'test_acc':    test_acc,
-        'f1':          test_f1,
-        'time':        elapsed,
-        'train_losses': train_losses,
-        'val_accs':    val_accs,
+        'best_val':    mean_best_val, 'best_val_std': std_best_val,
+        'test_acc':    mean_test_acc, 'test_acc_std': std_test_acc,
+        'f1':          mean_f1,       'f1_std': std_f1,
+        'time':        mean_time,     'time_std': std_time,
+        'train_losses': first_train_losses,
+        'val_accs':    first_val_accs,
     }
 
 # ─────────────────────────────────────────────────────────────
@@ -386,14 +413,14 @@ rows = [
      gin_res),
 ]
 
-hdr = (f"{'Model':<18} | {'Best Config':^28} | {'Best Val Acc':>12} | "
-       f"{'Test Acc':>9} | {'Macro F1':>9} | {'Time(s)':>8}")
+hdr = (f"{'Model':<18} | {'Best Config':^28} | {'Best Val Acc':>18} | "
+       f"{'Test Acc':>18} | {'Macro F1':>18} | {'Time(s)':>14}")
 print(hdr)
 print("─" * len(hdr))
 for model_name, cfg_str, _, res in rows:
     print(f"{model_name:<18} | {cfg_str:^28} | "
-          f"{res['best_val']:>12.4f} | {res['test_acc']:>9.4f} | "
-          f"{res['f1']:>9.4f} | {res['time']:>8.1f}")
+          f"{res['best_val']:.4f}±{res['best_val_std']:.4f} | {res['test_acc']:.4f}±{res['test_acc_std']:.4f} | "
+          f"{res['f1']:.4f}±{res['f1_std']:.4f} | {res['time']:.1f}±{res['time_std']:.1f}")
 
 # ─────────────────────────────────────────────────────────────
 # SAVE TO results.json
@@ -402,31 +429,31 @@ print("\n── Saving results.json ──────────────�
 
 save_results('amazon', 'MLP', {
     'best_cfg':  '—',
-    'val_acc':   round(mlp_res['best_val'], 4),
-    'test_acc':  round(mlp_res['test_acc'],  4),
-    'f1':        round(mlp_res['f1'],        4),
-    'time':      round(mlp_res['time'],      2),
+    'val_acc':   round(mlp_res['best_val'], 4), 'val_acc_std': round(mlp_res['best_val_std'], 4),
+    'test_acc':  round(mlp_res['test_acc'],  4), 'test_acc_std': round(mlp_res['test_acc_std'], 4),
+    'f1':        round(mlp_res['f1'],        4), 'f1_std': round(mlp_res['f1_std'], 4),
+    'time':      round(mlp_res['time'],      2), 'time_std': round(mlp_res['time_std'], 2),
 })
 save_results('amazon', 'GAT', {
     'best_cfg':  f"lr={gat_best['lr']},d={gat_best['dropout']},h={gat_best['hidden']}",
-    'val_acc':   round(gat_res['best_val'], 4),
-    'test_acc':  round(gat_res['test_acc'],  4),
-    'f1':        round(gat_res['f1'],        4),
-    'time':      round(gat_res['time'],      2),
+    'val_acc':   round(gat_res['best_val'], 4), 'val_acc_std': round(gat_res['best_val_std'], 4),
+    'test_acc':  round(gat_res['test_acc'],  4), 'test_acc_std': round(gat_res['test_acc_std'], 4),
+    'f1':        round(gat_res['f1'],        4), 'f1_std': round(gat_res['f1_std'], 4),
+    'time':      round(gat_res['time'],      2), 'time_std': round(gat_res['time_std'], 2),
 })
 save_results('amazon', 'SAGE', {
     'best_cfg':  f"lr={sage_best['lr']},d={sage_best['dropout']},h={sage_best['hidden']}",
-    'val_acc':   round(sage_res['best_val'], 4),
-    'test_acc':  round(sage_res['test_acc'],  4),
-    'f1':        round(sage_res['f1'],        4),
-    'time':      round(sage_res['time'],      2),
+    'val_acc':   round(sage_res['best_val'], 4), 'val_acc_std': round(sage_res['best_val_std'], 4),
+    'test_acc':  round(sage_res['test_acc'],  4), 'test_acc_std': round(sage_res['test_acc_std'], 4),
+    'f1':        round(sage_res['f1'],        4), 'f1_std': round(sage_res['f1_std'], 4),
+    'time':      round(sage_res['time'],      2), 'time_std': round(sage_res['time_std'], 2),
 })
 save_results('amazon', 'GIN', {
     'best_cfg':  f"lr={gin_best['lr']},d={gin_best['dropout']},h={gin_best['hidden']}",
-    'val_acc':   round(gin_res['best_val'], 4),
-    'test_acc':  round(gin_res['test_acc'],  4),
-    'f1':        round(gin_res['f1'],        4),
-    'time':      round(gin_res['time'],      2),
+    'val_acc':   round(gin_res['best_val'], 4), 'val_acc_std': round(gin_res['best_val_std'], 4),
+    'test_acc':  round(gin_res['test_acc'],  4), 'test_acc_std': round(gin_res['test_acc_std'], 4),
+    'f1':        round(gin_res['f1'],        4), 'f1_std': round(gin_res['f1_std'], 4),
+    'time':      round(gin_res['time'],      2), 'time_std': round(gin_res['time_std'], 2),
 })
 
 print("  Saved → results.json")

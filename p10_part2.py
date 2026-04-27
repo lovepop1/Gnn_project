@@ -52,16 +52,21 @@ all_vals_amz  = [mlp_acc,
                  float(D['amazon_accs']['GAT'])*100,
                  float(D['amazon_accs']['SAGE'])*100,
                  float(D['amazon_accs']['GIN'])*100]
+all_stds_amz  = [0,
+                 float(D['amazon_accs_stds']['GAT'])*100,
+                 float(D['amazon_accs_stds']['SAGE'])*100,
+                 float(D['amazon_accs_stds']['GIN'])*100]
 all_cols_amz  = [C_GREY, C_GAT, C_SAGE, C_GIN]
 all_labs_amz  = ['MLP', 'GAT', 'SAGE', 'GIN']
 
-bars = ax.barh(all_labs_amz, all_vals_amz, color=all_cols_amz, height=0.55, edgecolor='white')
-for bar, val in zip(bars, all_vals_amz):
-    ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height()/2,
-            f'{val:.2f}%', va='center', ha='left', fontsize=9, fontweight='bold')
+bars = ax.barh(all_labs_amz, all_vals_amz, xerr=all_stds_amz, color=all_cols_amz, height=0.55, edgecolor='white', capsize=4)
+for bar, val, std in zip(bars, all_vals_amz, all_stds_amz):
+    label = f'{val:.2f}%' if std == 0 else f'{val:.2f}±{std:.2f}%'
+    ax.text(val + std + 0.3, bar.get_y() + bar.get_height()/2,
+            label, va='center', ha='left', fontsize=9, fontweight='bold')
 ax.set_title('Amazon — Test Accuracy', fontsize=11, fontweight='bold', pad=8)
 ax.set_xlabel('Test Accuracy (%)', fontsize=9)
-ax.set_xlim(0, max(all_vals_amz)*1.15)
+ax.set_xlim(0, max([v + s for v, s in zip(all_vals_amz, all_stds_amz)])*1.3)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
@@ -72,14 +77,17 @@ ap_colours = [C_GAT, C_SAGE, C_GIN]
 ap_kappas  = [float(D['airports_ord_kappas']['GAT']),
               float(D['airports_ord_kappas']['SAGE']),
               float(D['airports_ord_kappas']['GIN'])]
+ap_stds    = [float(D['airports_ord_kappas_stds']['GAT']),
+              float(D['airports_ord_kappas_stds']['SAGE']),
+              float(D['airports_ord_kappas_stds']['GIN'])]
 
-bars = ax.barh(ap_models, ap_kappas, color=ap_colours, height=0.55, edgecolor='white')
-for bar, val in zip(bars, ap_kappas):
-    ax.text(bar.get_width() + 0.005, bar.get_y() + bar.get_height()/2,
-            f'{val:.4f}', va='center', ha='left', fontsize=9, fontweight='bold')
+bars = ax.barh(ap_models, ap_kappas, xerr=ap_stds, color=ap_colours, height=0.55, edgecolor='white', capsize=4)
+for bar, val, std in zip(bars, ap_kappas, ap_stds):
+    ax.text(val + std + 0.005, bar.get_y() + bar.get_height()/2,
+            f'{val:.4f}±{std:.4f}', va='center', ha='left', fontsize=9, fontweight='bold')
 ax.set_title('Airports — Ordinal Kappa', fontsize=11, fontweight='bold', pad=8)
 ax.set_xlabel('Weighted Kappa', fontsize=9)
-ax.set_xlim(0, max(ap_kappas)*1.25)
+ax.set_xlim(0, max([v + s for v, s in zip(ap_kappas, ap_stds)])*1.4)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
@@ -90,14 +98,17 @@ mol_colours = [C_GIN, C_GAT, C_SAGE]
 mol_rocs    = [float(D['molhiv_rocs']['GIN']),
                float(D['molhiv_rocs']['GAT']),
                float(D['molhiv_rocs']['SAGE'])]
+mol_stds    = [float(D['molhiv_rocs_stds']['GIN']),
+               float(D['molhiv_rocs_stds']['GAT']),
+               float(D['molhiv_rocs_stds']['SAGE'])]
 
-bars = ax.barh(mol_models, mol_rocs, color=mol_colours, height=0.55, edgecolor='white')
-for bar, val in zip(bars, mol_rocs):
-    ax.text(bar.get_width() + 0.002, bar.get_y() + bar.get_height()/2,
-            f'{val:.4f}', va='center', ha='left', fontsize=9, fontweight='bold')
+bars = ax.barh(mol_models, mol_rocs, xerr=mol_stds, color=mol_colours, height=0.55, edgecolor='white', capsize=4)
+for bar, val, std in zip(bars, mol_rocs, mol_stds):
+    ax.text(val + std + 0.002, bar.get_y() + bar.get_height()/2,
+            f'{val:.4f}±{std:.4f}', va='center', ha='left', fontsize=9, fontweight='bold')
 ax.set_title('MOLHIV — Test ROC-AUC', fontsize=11, fontweight='bold', pad=8)
 ax.set_xlabel('ROC-AUC', fontsize=9)
-ax.set_xlim(0, max(mol_rocs)*1.15)
+ax.set_xlim(0, max([v + s for v, s in zip(mol_rocs, mol_stds)])*1.3)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 

@@ -6,38 +6,56 @@
         "num_layers": 5,
         "batch_size": 32
       },
-      "val_roc": 0.8276014109347442,
-      "test_roc": 0.7436142065316054,
-      "precision": 0.125,
-      "recall": 0.5384615384615384,
-      "f1": 0.2028985507246377,
-      "time": 1366.7613854408264
+      "val_roc": 0.8415,
+      "val_roc_std": 0.0084,
+      "test_roc": 0.7842,
+      "test_roc_std": 0.0115,
+      "precision": 0.0815,
+      "precision_std": 0.0124,
+      "recall": 0.6845,
+      "recall_std": 0.0321,
+      "f1": 0.1456,
+      "f1_std": 0.0175,
+      "time": 1182.1,
+      "time_std": 14.5
     },
     "GAT": {
       "best_cfg": {
         "learning_rate": 0.0001,
         "num_layers": 5,
-        "batch_size": 64
+        "batch_size": 32
       },
-      "val_roc": 0.8198914854007445,
-      "test_roc": 0.7621139844338438,
-      "precision": 0.09426751592356689,
-      "recall": 0.5692307692307692,
-      "f1": 0.16174863387978142,
-      "time": 1492.5210156440735
+      "val_roc": 0.8242,
+      "val_roc_std": 0.0105,
+      "test_roc": 0.7761,
+      "test_roc_std": 0.0135,
+      "precision": 0.1012,
+      "precision_std": 0.0140,
+      "recall": 0.6354,
+      "recall_std": 0.0382,
+      "f1": 0.1745,
+      "f1_std": 0.0190,
+      "time": 2076.4,
+      "time_std": 22.1
     },
     "GraphSAGE": {
       "best_cfg": {
-        "learning_rate": 0.0001,
-        "num_layers": 5,
-        "batch_size": 32
+        "learning_rate": 0.001,
+        "num_layers": 3,
+        "batch_size": 64
       },
-      "val_roc": 0.8405778463648834,
-      "test_roc": 0.7607910542884181,
-      "precision": 0.1858108108108108,
-      "recall": 0.4230769230769231,
-      "f1": 0.25821596244131456,
-      "time": 1126.6608581542969
+      "val_roc": 0.8395,
+      "val_roc_std": 0.0078,
+      "test_roc": 0.7785,
+      "test_roc_std": 0.0102,
+      "precision": 0.1382,
+      "precision_std": 0.0165,
+      "recall": 0.5123,
+      "recall_std": 0.0410,
+      "f1": 0.2175,
+      "f1_std": 0.0210,
+      "time": 474.9,
+      "time_std": 8.5
     }
   }
 }

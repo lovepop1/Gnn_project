@@ -87,59 +87,124 @@ def evaluate(model, loader, evaluator, device):
     }
 
 class GIN(nn.Module):
-    def __init__(self, num_layers):
-        super().__init__()
-        self.atom_enc = AtomEncoder(300)
-        self.bond_enc = BondEncoder(300)
-        self.convs = nn.ModuleList()
-        for _ in range(num_layers):
-            mlp = nn.Sequential(nn.Linear(300,300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300,300))
-            self.convs.append(GINEConv(mlp, edge_dim=300))
-        self.pool = global_mean_pool
-        self.lin = nn.Linear(300,1)
-    def forward(self, b):
-        x = self.atom_enc(b.x)
-        ea = self.bond_enc(b.edge_attr)
-        for conv in self.convs:
-            x = conv(x, b.edge_index, ea) + x
-        x = self.pool(x, b.batch)
-        return self.lin(x)
-
-class GAT(nn.Module):
-    def __init__(self, num_layers):
+    def __init__(self, num_layers, dropout=0.5):
         super().__init__()
         self.atom_enc = AtomEncoder(300)
         self.bond_enc = BondEncoder(300)
         self.convs = nn.ModuleList()
         self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
+        for _ in range(num_layers):
+            mlp = nn.Sequential(nn.Linear(300,300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300,300))
+            self.convs.append(GINEConv(mlp, edge_dim=300))
+            self.bns.append(nn.BatchNorm1d(300))
+        self.pool = global_mean_pool
+        self.lin = nn.Linear(300,1)
+
+    def forward(self, b):
+        x = self.atom_enc(b.x)
+        ea = self.bond_enc(b.edge_attr)
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index, ea)
+            h = self.bns[layer](h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
+        x = self.pool(x, b.batch)
+        return self.lin(x)
+
+class GAT(nn.Module):
+    def __init__(self, num_layers, dropout=0.5):
+        super().__init__()
+        self.atom_enc = AtomEncoder(300)
+        self.bond_enc = BondEncoder(300)
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
         for _ in range(num_layers):
             self.convs.append(GATv2Conv(300, 75, heads=4, concat=True, edge_dim=300))
             self.bns.append(nn.BatchNorm1d(300))
         self.pool = global_mean_pool
         self.lin = nn.Linear(300,1)
+
     def forward(self, b):
         x = self.atom_enc(b.x)
         ea = self.bond_enc(b.edge_attr)
-        for conv, bn in zip(self.convs, self.bns):
-            x = F.elu(bn(conv(x, b.edge_index, ea)))
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index, ea)
+            h = self.bns[layer](h)
+            h = F.elu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
         x = self.pool(x, b.batch)
         return self.lin(x)
 
 class GraphSAGE(nn.Module):
-    def __init__(self, num_layers):
+    def __init__(self, num_layers, dropout=0.5):
         super().__init__()
         self.atom_enc = AtomEncoder(300)
         self.convs = nn.ModuleList()
         self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
         for _ in range(num_layers):
             self.convs.append(SAGEConv(300, 300, aggr='mean'))
             self.bns.append(nn.BatchNorm1d(300))
         self.pool = global_mean_pool
         self.lin = nn.Linear(300,1)
+
     def forward(self, b):
         x = self.atom_enc(b.x)
-        for conv, bn in zip(self.convs, self.bns):
-            x = bn(F.relu(conv(x, b.edge_index)))  # NO edge features
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index)
+            h = self.bns[layer](h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
         x = self.pool(x, b.batch)
         return self.lin(x)
 
@@ -185,7 +250,7 @@ for name, ModelClass in model_classes.items():
         
         torch.manual_seed(42)
         model = ModelClass(num_layers=n_layers).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
         
         train_loader = DataLoader(dataset[split_idx['train']], batch_size=bs, shuffle=True)
         val_loader = DataLoader(dataset[split_idx['valid']], batch_size=bs, shuffle=False)
@@ -211,50 +276,77 @@ for name, ModelClass in model_classes.items():
     best_configs[name] = best_cfg
     print(f"\n*** Best config for {name}: lr={best_cfg['learning_rate']}, layers={best_cfg['num_layers']}, batch={best_cfg['batch_size']} ***")
 
-    # Retrain winning config for full 100 epochs
-    print(f"Retraining {name} with best config for 100 epochs...")
-    torch.manual_seed(42)
-    model = ModelClass(num_layers=best_cfg['num_layers']).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=best_cfg['learning_rate'])
+    # Retrain winning config for full 100 epochs (5 seeds)
+    print(f"Retraining {name} with best config for 100 epochs (5 seeds)...")
+    
+    seeds = [42, 123, 456, 789, 999]
+    all_metrics = []
+    first_train_losses = []
+    first_val_rocs = []
     
     train_loader = DataLoader(dataset[split_idx['train']], batch_size=best_cfg['batch_size'], shuffle=True)
     val_loader = DataLoader(dataset[split_idx['valid']], batch_size=best_cfg['batch_size'], shuffle=False)
     test_loader = DataLoader(dataset[split_idx['test']], batch_size=best_cfg['batch_size'], shuffle=False)
-    
-    best_val_roc = 0
-    checkpoint_path = f'molhiv_{name.lower()}_best.pt'
-    
-    train_losses = []
-    val_rocs = []
-    
-    start_time = time.time()
-    for epoch in range(1, 101):
-        loss = train_epoch(model, train_loader, optimizer, device)
-        val_metrics = evaluate(model, val_loader, evaluator, device)
-        val_roc = val_metrics['roc_auc']
+
+    for i, current_seed in enumerate(seeds):
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
+
+        model = ModelClass(num_layers=best_cfg['num_layers']).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=best_cfg['learning_rate'], weight_decay=1e-5)
         
-        train_losses.append(loss)
-        val_rocs.append(val_roc)
+        best_val_roc = 0
+        checkpoint_path = f'molhiv_{name.lower()}_best_{current_seed}.pt'
         
-        if val_roc > best_val_roc:
-            best_val_roc = val_roc
-            torch.save(model.state_dict(), checkpoint_path)
+        train_losses = []
+        val_rocs = []
+        
+        start_time = time.time()
+        for epoch in range(1, 101):
+            loss = train_epoch(model, train_loader, optimizer, device)
+            val_metrics = evaluate(model, val_loader, evaluator, device)
+            val_roc = val_metrics['roc_auc']
             
-    train_time = time.time() - start_time
-    history[name] = {'loss': train_losses, 'val_roc': val_rocs}
+            train_losses.append(loss)
+            val_rocs.append(val_roc)
+            
+            if val_roc > best_val_roc:
+                best_val_roc = val_roc
+                torch.save(model.state_dict(), checkpoint_path)
+                
+        train_time = time.time() - start_time
+        
+        if i == 0:
+            first_train_losses = train_losses
+            first_val_rocs = val_rocs
+        
+        # Load best for test evaluation
+        model.load_state_dict(torch.load(checkpoint_path))
+        test_metrics = evaluate(model, test_loader, evaluator, device)
+        test_metrics['val_roc'] = best_val_roc
+        test_metrics['time'] = train_time
+        all_metrics.append(test_metrics)
+
+    history[name] = {'loss': first_train_losses, 'val_roc': first_val_rocs}
     
-    # Load best for test evaluation
-    model.load_state_dict(torch.load(checkpoint_path))
-    test_metrics = evaluate(model, test_loader, evaluator, device)
-    
+    # Aggregate
+    keys = ['val_roc', 'roc_auc', 'precision', 'recall', 'f1', 'time']
+    agg_metrics = {}
+    for k in keys:
+        vals = [m[k] for m in all_metrics]
+        agg_metrics[k] = float(np.mean(vals))
+        agg_metrics[f"{k}_std"] = float(np.std(vals))
+
     final_results[name] = {
         'best_cfg': best_cfg,
-        'val_roc': best_val_roc,
-        'test_roc': test_metrics['roc_auc'],
-        'precision': test_metrics['precision'],
-        'recall': test_metrics['recall'],
-        'f1': test_metrics['f1'],
-        'time': train_time
+        'val_roc': agg_metrics['val_roc'], 'val_roc_std': agg_metrics['val_roc_std'],
+        'test_roc': agg_metrics['roc_auc'], 'test_roc_std': agg_metrics['roc_auc_std'],
+        'precision': agg_metrics['precision'], 'precision_std': agg_metrics['precision_std'],
+        'recall': agg_metrics['recall'], 'recall_std': agg_metrics['recall_std'],
+        'f1': agg_metrics['f1'], 'f1_std': agg_metrics['f1_std'],
+        'time': agg_metrics['time'], 'time_std': agg_metrics['time_std']
     }
     
     save_results('molhiv', name, final_results[name])
@@ -285,8 +377,8 @@ plt.show()
 
 # Print Table
 print("\nFinal Results Summary:")
-print("| Model     | Best Config (lr/layers/batch) | Best Val ROC | Test ROC | Precision | Recall | F1   | Time(s) |")
-print("|-----------|-------------------------------|-------------|----------|-----------|--------|------|---------|")
+print(f"| {'Model':<9} | {'Best Config (lr/layers/batch)':<29} | {'Best Val ROC':>17} | {'Test ROC':>17} | {'Precision':>17} | {'Recall':>17} | {'F1':>17} | {'Time(s)':>15} |")
+print("|-----------|-------------------------------|-------------------|-------------------|-------------------|-------------------|-------------------|-----------------|")
 for name, res in final_results.items():
     cfg_str = f"{res['best_cfg']['learning_rate']}/{res['best_cfg']['num_layers']}/{res['best_cfg']['batch_size']}"
-    print(f"| {name:<9} | {cfg_str:<29} | {res['val_roc']:.4f}      | {res['test_roc']:.4f}   | {res['precision']:.4f}    | {res['recall']:.4f} | {res['f1']:.4f} | {res['time']:.2f}  |")
+    print(f"| {name:<9} | {cfg_str:<29} | {res['val_roc']:.4f}±{res['val_roc_std']:.4f} | {res['test_roc']:.4f}±{res['test_roc_std']:.4f} | {res['precision']:.4f}±{res['precision_std']:.4f} | {res['recall']:.4f}±{res['recall_std']:.4f} | {res['f1']:.4f}±{res['f1_std']:.4f} | {res['time']:.1f}±{res['time_std']:.1f} |")

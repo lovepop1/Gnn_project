@@ -238,104 +238,123 @@ def train_one(arch, formulation, lr, dropout, embed_dim):
         arch_key = 'sage'
     ckpt_name = f"airports_{arch_key}_{'ordinal' if formulation=='ordinal' else 'cls'}_best.pt"
 
-    torch.manual_seed(42)
-    model, embed = build_model(arch, embed_dim, dropout, formulation=formulation)
-    node_ids = torch.arange(num_nodes, device=device)
-    edge_index_d = edge_index.to(device)
-    labels_d = labels.to(device)
+    seeds = [42, 123, 456, 789, 999]
+    all_metrics = []
+    first_train_mse_hist = []
+    first_val_mse_hist = []
 
-    opt = torch.optim.Adam(list(model.parameters()) + list(embed.parameters()),
-                           lr=lr, weight_decay=5e-4)
+    for i, current_seed in enumerate(seeds):
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
 
-    # For curves
-    train_mse_hist = []
-    val_mse_hist = []
+        model, embed = build_model(arch, embed_dim, dropout, formulation=formulation)
+        node_ids = torch.arange(num_nodes, device=device)
+        edge_index_d = edge_index.to(device)
+        labels_d = labels.to(device)
 
-    best_path = ckpt_name
-    if formulation == 'ordinal':
-        best_val_mse = float('inf')
-    else:
-        best_val_acc = -float('inf')
+        opt = torch.optim.Adam(list(model.parameters()) + list(embed.parameters()),
+                               lr=lr, weight_decay=5e-4)
 
-    start = time.time()
+        # For curves
+        train_mse_hist = []
+        val_mse_hist = []
 
-    # Precompute label tensors for speed
-    y_train = labels_d[train_idx]
-    y_val = labels_d[val_idx]
-
-    for epoch in range(300):
-        model.train(); embed.train()
-        opt.zero_grad(set_to_none=True)
-
-        x = embed(node_ids)
-        out = model(x, edge_index_d)
-
+        best_path = ckpt_name.replace('.pt', f'_{current_seed}.pt')
         if formulation == 'ordinal':
-            raw = out.squeeze()  # [num_nodes]
-            loss = F.mse_loss(raw[train_idx], y_train.float())
+            best_val_mse = float('inf')
         else:
-            logits = out  # [num_nodes, 4]
-            loss = F.cross_entropy(logits[train_idx], y_train)
+            best_val_acc = -float('inf')
 
-        loss.backward()
-        opt.step()
+        start = time.time()
 
-        # Train/Val MSE for plotting (match evaluate's mse definitions)
-        model.eval(); embed.eval()
-        with torch.no_grad():
+        # Precompute label tensors for speed
+        y_train = labels_d[train_idx]
+        y_val = labels_d[val_idx]
+
+        for epoch in range(300):
+            model.train(); embed.train()
+            opt.zero_grad(set_to_none=True)
+
             x = embed(node_ids)
             out = model(x, edge_index_d)
 
             if formulation == 'ordinal':
-                raw = out.squeeze()
-                train_mse = F.mse_loss(raw[train_idx], y_train.float()).item()
-                val_mse = F.mse_loss(raw[val_idx], y_val.float()).item()
+                raw = out.squeeze()  # [num_nodes]
+                loss = F.mse_loss(raw[train_idx], y_train.float())
             else:
-                logits = out
-                train_pred = logits[train_idx].argmax(dim=1)
-                val_pred = logits[val_idx].argmax(dim=1)
-                train_mse = F.mse_loss(train_pred.float(), y_train.float()).item()
-                val_mse = F.mse_loss(val_pred.float(), y_val.float()).item()
+                logits = out  # [num_nodes, 4]
+                loss = F.cross_entropy(logits[train_idx], y_train)
 
-        train_mse_hist.append(train_mse)
-        val_mse_hist.append(val_mse)
+            loss.backward()
+            opt.step()
 
-        # Checkpoint selection
-        if formulation == 'ordinal':
-            if val_mse < best_val_mse:
-                best_val_mse = val_mse
-                torch.save({'embed': embed.state_dict(), 'model': model.state_dict()}, best_path)
-        else:
+            # Train/Val MSE for plotting (match evaluate's mse definitions)
+            model.eval(); embed.eval()
             with torch.no_grad():
                 x = embed(node_ids)
-                logits = model(x, edge_index_d)
-                val_pred = logits[val_idx].argmax(dim=1)
-                val_acc = (val_pred == y_val).float().mean().item()
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                torch.save({'embed': embed.state_dict(), 'model': model.state_dict()}, best_path)
+                out = model(x, edge_index_d)
 
-        if (epoch + 1) % 50 == 0:
+                if formulation == 'ordinal':
+                    raw = out.squeeze()
+                    train_mse = F.mse_loss(raw[train_idx], y_train.float()).item()
+                    val_mse = F.mse_loss(raw[val_idx], y_val.float()).item()
+                else:
+                    logits = out
+                    train_pred = logits[train_idx].argmax(dim=1)
+                    val_pred = logits[val_idx].argmax(dim=1)
+                    train_mse = F.mse_loss(train_pred.float(), y_train.float()).item()
+                    val_mse = F.mse_loss(val_pred.float(), y_val.float()).item()
+
+            train_mse_hist.append(train_mse)
+            val_mse_hist.append(val_mse)
+
+            # Checkpoint selection
             if formulation == 'ordinal':
-                print(f"{arch} {formulation} epoch {epoch+1}/300 val_mse={val_mse:.6f}")
+                if val_mse < best_val_mse:
+                    best_val_mse = val_mse
+                    torch.save({'embed': embed.state_dict(), 'model': model.state_dict()}, best_path)
             else:
-                print(f"{arch} {formulation} epoch {epoch+1}/300 val_mse={val_mse:.6f}")
+                with torch.no_grad():
+                    x = embed(node_ids)
+                    logits = model(x, edge_index_d)
+                    val_pred = logits[val_idx].argmax(dim=1)
+                    val_acc = (val_pred == y_val).float().mean().item()
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    torch.save({'embed': embed.state_dict(), 'model': model.state_dict()}, best_path)
 
-    elapsed = time.time() - start
+        elapsed = time.time() - start
 
-    # Load best checkpoint
-    ckpt = torch.load(best_path, map_location=device)
-    model.load_state_dict(ckpt['model'])
-    embed.load_state_dict(ckpt['embed'])
+        # Load best checkpoint
+        ckpt = torch.load(best_path, map_location=device)
+        model.load_state_dict(ckpt['model'])
+        embed.load_state_dict(ckpt['embed'])
 
-    # Test evaluation
-    test_metrics = evaluate(model, embed, data, test_idx, formulation=formulation, device=device)
+        # Test evaluation
+        test_metrics = evaluate(model, embed, data, test_idx, formulation=formulation, device=device)
+        test_metrics['time'] = elapsed
+        all_metrics.append(test_metrics)
+
+        if i == 0:
+            first_train_mse_hist = train_mse_hist
+            first_val_mse_hist = val_mse_hist
+
+    keys = ['mse', 'mae', 'acc', 'kappa', 'f1', 'time']
+    agg_metrics = {}
+    for k in keys:
+        vals = [m[k] for m in all_metrics]
+        agg_metrics[k] = float(np.mean(vals))
+        agg_metrics[f"{k}_std"] = float(np.std(vals))
+
+    print(f"  ✓ {arch} {formulation} done (5 seeds) | time={agg_metrics['time']:.1f}s")
+    
     return {
-        'ckpt_path': best_path,
-        'train_mse_hist': train_mse_hist,
-        'val_mse_hist': val_mse_hist,
-        'time': elapsed,
-        **test_metrics
+        'ckpt_path': ckpt_name,
+        'train_mse_hist': first_train_mse_hist,
+        'val_mse_hist': first_val_mse_hist,
+        **agg_metrics
     }
 
 # Train all 6 pairs and build master table
@@ -352,28 +371,36 @@ for arch in archs:
     print(f"\n--- Training {arch} Ordinal (300ep) ---")
     ord_res = train_one(arch, 'ordinal', lr=lr, dropout=dropout, embed_dim=embed_dim)
     save_results('airports', f"{arch if arch!='GraphSAGE' else 'GraphSAGE'}_ordinal",
-                 {'best_cfg': cfg, 'mse': ord_res['mse'], 'mae': ord_res['mae'],
-                  'acc': ord_res['acc'], 'kappa': ord_res['kappa'], 'f1': ord_res['f1'],
-                  'time': ord_res['time']})
+                 {'best_cfg': cfg, 
+                  'mse': ord_res['mse'], 'mse_std': ord_res['mse_std'],
+                  'mae': ord_res['mae'], 'mae_std': ord_res['mae_std'],
+                  'acc': ord_res['acc'], 'acc_std': ord_res['acc_std'],
+                  'kappa': ord_res['kappa'], 'kappa_std': ord_res['kappa_std'],
+                  'f1': ord_res['f1'], 'f1_std': ord_res['f1_std'],
+                  'time': ord_res['time'], 'time_std': ord_res['time_std']})
     master_rows.append({
         'Model+Formulation': f"{arch} — Ordinal",
         'Best Config': f"lr={lr}, d={dropout}, embed={embed_dim}",
-        **{k: ord_res[k] for k in ['mse', 'mae', 'acc', 'kappa', 'f1']},
-        'Time': ord_res['time']
+        **{k: f"{ord_res[k]:.4f}±{ord_res[k+'_std']:.4f}" for k in ['mse', 'mae', 'acc', 'kappa', 'f1']},
+        'Time': f"{ord_res['time']:.1f}±{ord_res['time_std']:.1f}"
     })
     history_ordinal[arch] = (ord_res['train_mse_hist'], ord_res['val_mse_hist'])
 
     print(f"\n--- Training {arch} Classification (300ep) ---")
     cls_res = train_one(arch, 'cls', lr=lr, dropout=dropout, embed_dim=embed_dim)
     save_results('airports', f"{arch if arch!='GraphSAGE' else 'GraphSAGE'}_cls",
-                 {'best_cfg': cfg, 'mse': cls_res['mse'], 'mae': cls_res['mae'],
-                  'acc': cls_res['acc'], 'kappa': cls_res['kappa'], 'f1': cls_res['f1'],
-                  'time': cls_res['time']})
+                 {'best_cfg': cfg, 
+                  'mse': cls_res['mse'], 'mse_std': cls_res['mse_std'],
+                  'mae': cls_res['mae'], 'mae_std': cls_res['mae_std'],
+                  'acc': cls_res['acc'], 'acc_std': cls_res['acc_std'],
+                  'kappa': cls_res['kappa'], 'kappa_std': cls_res['kappa_std'],
+                  'f1': cls_res['f1'], 'f1_std': cls_res['f1_std'],
+                  'time': cls_res['time'], 'time_std': cls_res['time_std']})
     master_rows.append({
         'Model+Formulation': f"{arch} — Classification",
         'Best Config': f"lr={lr}, d={dropout}, embed={embed_dim}",
-        **{k: cls_res[k] for k in ['mse', 'mae', 'acc', 'kappa', 'f1']},
-        'Time': cls_res['time']
+        **{k: f"{cls_res[k]:.4f}±{cls_res[k+'_std']:.4f}" for k in ['mse', 'mae', 'acc', 'kappa', 'f1']},
+        'Time': f"{cls_res['time']:.1f}±{cls_res['time_std']:.1f}"
     })
     history_cls[arch] = (cls_res['train_mse_hist'], cls_res['val_mse_hist'])
 
@@ -382,21 +409,21 @@ master_table = []
 master_table.append({
     'Model+Formulation': "Degree heuristic",
     'Best Config': "—",
-    'mse': degree_heur['mse'],
-    'mae': degree_heur['mae'],
-    'acc': degree_heur['acc'],
-    'kappa': degree_heur['kappa'],
-    'f1': degree_heur['f1'],
+    'mse': f"{degree_heur['mse']:.4f}",
+    'mae': f"{degree_heur['mae']:.4f}",
+    'acc': f"{degree_heur['acc']:.4f}",
+    'kappa': f"{degree_heur['kappa']:.4f}",
+    'f1': f"{degree_heur['f1']:.4f}",
     'Time': "—"
 })
 master_table.extend(master_rows)
 
 print("\n=== MASTER TABLE ===")
-print("| Model+Formulation              | Best Config | MSE | MAE | Acc | Kappa | F1 | Time |")
-print("|-------------------------------|-------------|-----|-----|-----|-------|----|------|")
+print(f"| {'Model+Formulation':<29} | {'Best Config':<23} | {'MSE':>15} | {'MAE':>15} | {'Acc':>15} | {'Kappa':>15} | {'F1':>15} | {'Time':>13} |")
+print("|-------------------------------|-------------------------|-----------------|-----------------|-----------------|-----------------|-----------------|---------------|")
 for r in master_table:
-    print(f"| {r['Model+Formulation']:<29} | {r['Best Config']:<11} | "
-          f"{r['mse']:.6f} | {r['mae']:.6f} | {r['acc']:.6f} | {r['kappa']:.6f} | {r['f1']:.6f} | {r['Time']} |")
+    print(f"| {r['Model+Formulation']:<29} | {r['Best Config']:<23} | "
+          f"{r['mse']:>15} | {r['mae']:>15} | {r['acc']:>15} | {r['kappa']:>15} | {r['f1']:>15} | {r['Time']:>13} |")
 
 # ---------------------- FIGURES ----------------------
 def plot_curves(hist_dict, out_name, title_prefix):

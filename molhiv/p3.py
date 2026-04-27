@@ -21,36 +21,49 @@ val_loader = DataLoader(dataset[split_idx['valid']], batch_size=64, shuffle=Fals
 test_loader = DataLoader(dataset[split_idx['test']], batch_size=64, shuffle=False)
 all_loader = DataLoader(dataset, batch_size=256, shuffle=False)
 
-def run_ablation(model, lr, bs, epochs, track_val=False):
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    tl = DataLoader(dataset[split_idx['train']], batch_size=bs, shuffle=True)
-    vl = DataLoader(dataset[split_idx['valid']], batch_size=bs, shuffle=False)
-    tel= DataLoader(dataset[split_idx['test']], batch_size=bs, shuffle=False)
-    
-    best_val = 0
-    best_state = None
-    for ep in range(1, epochs + 1):
-        model.train()
-        for b in tl:
-            b = b.to(device)
-            optimizer.zero_grad()
-            out = model(b).squeeze(-1)
-            loss = criterion.to(device)(out, b.y.squeeze(-1).float())
-            loss.backward()
-            optimizer.step()
+def run_ablation(model_cls, kwargs, lr, bs, epochs, track_val=False):
+    all_test = []
+    all_val = []
+    seeds = [42, 123, 456, 789, 999]
+    for current_seed in seeds:
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
+
+        model = model_cls(**kwargs).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+        tl = DataLoader(dataset[split_idx['train']], batch_size=bs, shuffle=True)
+        vl = DataLoader(dataset[split_idx['valid']], batch_size=bs, shuffle=False)
+        tel= DataLoader(dataset[split_idx['test']], batch_size=bs, shuffle=False)
         
-        if track_val:
-            val_metrics = evaluate(model, vl, evaluator, device)
-            if val_metrics['roc_auc'] > best_val:
-                best_val = val_metrics['roc_auc']
-                best_state = {k: v.cpu() for k, v in model.state_dict().items()}
-                
-    if track_val and best_state is not None:
-        model.load_state_dict(best_state)
-    
-    test_metrics = evaluate(model, tel, evaluator, device)
-    val_metrics = evaluate(model, vl, evaluator, device)
-    return test_metrics['roc_auc'], (best_val if track_val else val_metrics['roc_auc'])
+        best_val = 0
+        best_state = None
+        for ep in range(1, epochs + 1):
+            model.train()
+            for b in tl:
+                b = b.to(device)
+                optimizer.zero_grad()
+                out = model(b).squeeze(-1)
+                loss = criterion.to(device)(out, b.y.squeeze(-1).float())
+                loss.backward()
+                optimizer.step()
+            
+            if track_val:
+                val_metrics = evaluate(model, vl, evaluator, device)
+                if val_metrics['roc_auc'] > best_val:
+                    best_val = val_metrics['roc_auc']
+                    best_state = {k: v.cpu() for k, v in model.state_dict().items()}
+                    
+        if track_val and best_state is not None:
+            model.load_state_dict(best_state)
+        
+        test_metrics = evaluate(model, tel, evaluator, device)
+        val_metrics = evaluate(model, vl, evaluator, device)
+        all_test.append(test_metrics['roc_auc'])
+        all_val.append(best_val if track_val else val_metrics['roc_auc'])
+
+    return float(np.mean(all_test)), float(np.std(all_test)), float(np.mean(all_val)), float(np.std(all_val))
 
 # ─── ABLATION A: Atoms-Only MLP ───
 class AtomsOnlyMLP(nn.Module):
@@ -66,95 +79,168 @@ class AtomsOnlyMLP(nn.Module):
 
 # ─── ABLATION B: Structure-Only Models ───
 class StructureOnlyGIN(nn.Module):
-    def __init__(self, num_layers):
+    def __init__(self, num_layers, dropout=0.5):
         super().__init__()
         self.const_x = nn.Parameter(torch.zeros(1, 300))
         self.bond_enc = BondEncoder(300)
-        self.convs = nn.ModuleList([GINEConv(nn.Sequential(nn.Linear(300,300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300,300)), edge_dim=300) for _ in range(num_layers)])
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
+        for _ in range(num_layers):
+            mlp = nn.Sequential(nn.Linear(300,300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300,300))
+            self.convs.append(GINEConv(mlp, edge_dim=300))
+            self.bns.append(nn.BatchNorm1d(300))
         self.pool = global_mean_pool
         self.lin = nn.Linear(300,1)
+
     def forward(self, b):
         x = self.const_x.expand(b.x.size(0), -1)
         ea = self.bond_enc(b.edge_attr)
-        for conv in self.convs: x = conv(x, b.edge_index, ea) + x
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index, ea)
+            h = self.bns[layer](h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
         x = self.pool(x, b.batch)
         return self.lin(x)
 
 class StructureOnlyGAT(nn.Module):
-    def __init__(self, num_layers):
+    def __init__(self, num_layers, dropout=0.5):
         super().__init__()
         self.const_x = nn.Parameter(torch.zeros(1, 300))
         self.bond_enc = BondEncoder(300)
-        self.convs = nn.ModuleList([GATv2Conv(300, 75, heads=4, concat=True, edge_dim=300) for _ in range(num_layers)])
-        self.bns = nn.ModuleList([nn.BatchNorm1d(300) for _ in range(num_layers)])
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
+        for _ in range(num_layers):
+            self.convs.append(GATv2Conv(300, 75, heads=4, concat=True, edge_dim=300))
+            self.bns.append(nn.BatchNorm1d(300))
         self.pool = global_mean_pool
         self.lin = nn.Linear(300,1)
+
     def forward(self, b):
         x = self.const_x.expand(b.x.size(0), -1)
         ea = self.bond_enc(b.edge_attr)
-        for conv, bn in zip(self.convs, self.bns): x = F.elu(bn(conv(x, b.edge_index, ea)))
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index, ea)
+            h = self.bns[layer](h)
+            h = F.elu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
         x = self.pool(x, b.batch)
         return self.lin(x)
 
 class StructureOnlySAGE(nn.Module):
-    def __init__(self, num_layers):
+    def __init__(self, num_layers, dropout=0.5):
         super().__init__()
         self.const_x = nn.Parameter(torch.zeros(1, 300))
-        self.convs = nn.ModuleList([SAGEConv(300, 300, aggr='mean') for _ in range(num_layers)])
-        self.bns = nn.ModuleList([nn.BatchNorm1d(300) for _ in range(num_layers)])
+        self.convs = nn.ModuleList()
+        self.bns = nn.ModuleList()
+        self.dropout = dropout
+        self.virtualnode_emb = nn.Embedding(1, 300)
+        self.mlp_virtualnode_list = nn.ModuleList([
+            nn.Sequential(nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU(), nn.Linear(300, 300), nn.BatchNorm1d(300), nn.ReLU()) 
+            for _ in range(num_layers - 1)
+        ])
+        for _ in range(num_layers):
+            self.convs.append(SAGEConv(300, 300, aggr='mean'))
+            self.bns.append(nn.BatchNorm1d(300))
         self.pool = global_mean_pool
         self.lin = nn.Linear(300,1)
+
     def forward(self, b):
         x = self.const_x.expand(b.x.size(0), -1)
-        for conv, bn in zip(self.convs, self.bns): x = bn(F.relu(conv(x, b.edge_index)))
+        virtualnode_embedding = self.virtualnode_emb(torch.zeros(b.batch[-1].item() + 1).long().to(x.device))
+        
+        for layer in range(len(self.convs)):
+            x = x + virtualnode_embedding[b.batch]
+            
+            h = self.convs[layer](x, b.edge_index)
+            h = self.bns[layer](h)
+            h = F.relu(h)
+            h = F.dropout(h, p=self.dropout, training=self.training)
+            x = h + x
+            
+            if layer < len(self.convs) - 1:
+                virtualnode_embedding = virtualnode_embedding + global_mean_pool(x, b.batch)
+                virtualnode_embedding = self.mlp_virtualnode_list[layer](virtualnode_embedding)
+                virtualnode_embedding = F.dropout(virtualnode_embedding, p=self.dropout, training=self.training)
+                
         x = self.pool(x, b.batch)
         return self.lin(x)
 
-print("Running Ablation A & B (100 epochs)...")
+print("Running Ablation A & B (100 epochs, 5 seeds)...")
 ablation_results = {}
 for name, StructClass in [('GIN', StructureOnlyGIN), ('GAT', StructureOnlyGAT), ('GraphSAGE', StructureOnlySAGE)]:
     cfg = best_configs[name]
     
     # Atoms-Only
-    torch.manual_seed(42)
-    atoms_model = AtomsOnlyMLP().to(device)
-    atoms_test, _ = run_ablation(atoms_model, cfg['learning_rate'], cfg['batch_size'], 100, track_val=True)
+    atoms_test, atoms_test_std, _, _ = run_ablation(AtomsOnlyMLP, {}, cfg['learning_rate'], cfg['batch_size'], 100, track_val=True)
     
     # Structure-Only
-    torch.manual_seed(42)
-    struct_model = StructClass(cfg['num_layers']).to(device)
-    struct_test, _ = run_ablation(struct_model, cfg['learning_rate'], cfg['batch_size'], 100, track_val=True)
+    struct_test, struct_test_std, _, _ = run_ablation(StructClass, {'num_layers': cfg['num_layers']}, cfg['learning_rate'], cfg['batch_size'], 100, track_val=True)
     
-    ablation_results[name] = {'atoms': atoms_test, 'struct': struct_test}
+    ablation_results[name] = {'atoms': atoms_test, 'atoms_std': atoms_test_std, 'struct': struct_test, 'struct_std': struct_test_std}
 
 print("\nTable 1 — Ablation A + B (full model vs disabled components):")
 print("| Model      | Full Model ROC | Atoms-Only ROC | Structure-Only ROC |")
 print("|------------|---------------|---------------|-------------------|")
 for m in ['GIN', 'GAT', 'GraphSAGE']:
-    print(f"| {m:<10} | {final_results[m]['test_roc']:.4f}        | {ablation_results[m]['atoms']:.4f}        | {ablation_results[m]['struct']:.4f}            |")
+    print(f"| {m:<10} | {final_results[m]['test_roc']:.4f}±{final_results[m].get('test_roc_std', 0.0):.4f} | {ablation_results[m]['atoms']:.4f}±{ablation_results[m]['atoms_std']:.4f} | {ablation_results[m]['struct']:.4f}±{ablation_results[m]['struct_std']:.4f} |")
 
 
-print("\nRunning Ablation C — Depth Comparison (50 epochs for efficiency)...")
+print("\nRunning Ablation C — Depth Comparison (50 epochs for efficiency, 5 seeds)...")
 depths = [2, 5, 8]
 depth_results = {d: {} for d in depths}
+depth_results_std = {d: {} for d in depths}
 for name, BaseClass in [('GIN', GIN), ('GAT', GAT), ('GraphSAGE', GraphSAGE)]:
     cfg = best_configs[name]
     for d in depths:
-        torch.manual_seed(42)
-        model = BaseClass(num_layers=d).to(device)
-        _, val_roc = run_ablation(model, cfg['learning_rate'], cfg['batch_size'], 50, track_val=True)
+        _, _, val_roc, val_roc_std = run_ablation(BaseClass, {'num_layers': d}, cfg['learning_rate'], cfg['batch_size'], 50, track_val=True)
         depth_results[d][name] = val_roc
+        depth_results_std[d][name] = val_roc_std
 
 print("\nTable 2 — Ablation C (depth comparison per model):")
 print("| Depth | GIN val ROC | GAT val ROC | SAGE val ROC |")
 print("|-------|------------|------------|-------------|")
 for d in depths:
-    print(f"|   {d}   | {depth_results[d]['GIN']:.4f}      | {depth_results[d]['GAT']:.4f}      | {depth_results[d]['GraphSAGE']:.4f}      |")
+    print(f"|   {d}   | {depth_results[d]['GIN']:.4f}±{depth_results_std[d]['GIN']:.4f} | {depth_results[d]['GAT']:.4f}±{depth_results_std[d]['GAT']:.4f} | {depth_results[d]['GraphSAGE']:.4f}±{depth_results_std[d]['GraphSAGE']:.4f} |")
 
 plt.figure(figsize=(6, 4))
-plt.plot(depths, [depth_results[d]['GAT'] for d in depths], marker='o', label='GAT', color='blue')
-plt.plot(depths, [depth_results[d]['GraphSAGE'] for d in depths], marker='o', label='GraphSAGE', color='green')
-plt.plot(depths, [depth_results[d]['GIN'] for d in depths], marker='o', label='GIN', color='purple')
+plt.errorbar(depths, [depth_results[d]['GAT'] for d in depths], yerr=[depth_results_std[d]['GAT'] for d in depths], marker='o', label='GAT', color='blue', capsize=4)
+plt.errorbar(depths, [depth_results[d]['GraphSAGE'] for d in depths], yerr=[depth_results_std[d]['GraphSAGE'] for d in depths], marker='o', label='GraphSAGE', color='green', capsize=4)
+plt.errorbar(depths, [depth_results[d]['GIN'] for d in depths], yerr=[depth_results_std[d]['GIN'] for d in depths], marker='o', label='GIN', color='purple', capsize=4)
 plt.xlabel('Number of Layers')
 plt.ylabel('Val ROC-AUC')
 plt.title('Validation ROC-AUC vs Layer Depth')

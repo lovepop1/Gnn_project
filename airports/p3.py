@@ -333,66 +333,83 @@ class GATDepthNet(nn.Module):
         return self.head(x)
 
 def train_depth_gat(depth, formulation, epochs=200):
-    model = GATDepthNet(embed_dim, depth, dropout, formulation).to(device)
-    embed = nn.Embedding(num_nodes, embed_dim).to(device)
+    all_best_val = []
+    seeds = [42, 123, 456, 789, 999]
+    for current_seed in seeds:
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
 
-    opt = torch.optim.Adam(list(model.parameters()) + list(embed.parameters()),
-                            lr=lr, weight_decay=5e-4)
+        model = GATDepthNet(embed_dim, depth, dropout, formulation).to(device)
+        embed = nn.Embedding(num_nodes, embed_dim).to(device)
 
-    node_ids = torch.arange(num_nodes, device=device)
-    ei = edge_index.to(device)
+        opt = torch.optim.Adam(list(model.parameters()) + list(embed.parameters()),
+                                lr=lr, weight_decay=5e-4)
 
-    y_train = labels[train_idx].to(device)
-    y_val = labels[val_idx].to(device)
+        node_ids = torch.arange(num_nodes, device=device)
+        ei = edge_index.to(device)
 
-    best_val_mse = float('inf')
-    best_val_acc = -float('inf')
+        y_train = labels[train_idx].to(device)
+        y_val = labels[val_idx].to(device)
 
-    for ep in range(epochs):
-        model.train(); embed.train()
-        opt.zero_grad(set_to_none=True)
+        best_val_mse = float('inf')
+        best_val_acc = -float('inf')
 
-        x = embed(node_ids)
-        out = model(x, ei)
+        for ep in range(epochs):
+            model.train(); embed.train()
+            opt.zero_grad(set_to_none=True)
 
-        if formulation == 'ordinal':
-            raw = out.squeeze()
-            loss = F.mse_loss(raw[train_idx], y_train.float())
-        else:
-            logits = out
-            loss = F.cross_entropy(logits[train_idx], y_train)
-
-        loss.backward()
-        opt.step()
-
-        model.eval(); embed.eval()
-        with torch.no_grad():
             x = embed(node_ids)
             out = model(x, ei)
+
             if formulation == 'ordinal':
                 raw = out.squeeze()
-                val_mse = F.mse_loss(raw[val_idx], y_val.float()).item()
-                if val_mse < best_val_mse:
-                    best_val_mse = val_mse
+                loss = F.mse_loss(raw[train_idx], y_train.float())
             else:
                 logits = out
-                val_pred = logits[val_idx].argmax(dim=1)
-                val_acc = (val_pred == y_val).float().mean().item()
-                if val_acc > best_val_acc:
-                    best_val_acc = val_acc
+                loss = F.cross_entropy(logits[train_idx], y_train)
 
-    return best_val_mse if formulation == 'ordinal' else best_val_acc
+            loss.backward()
+            opt.step()
+
+            model.eval(); embed.eval()
+            with torch.no_grad():
+                x = embed(node_ids)
+                out = model(x, ei)
+                if formulation == 'ordinal':
+                    raw = out.squeeze()
+                    val_mse = F.mse_loss(raw[val_idx], y_val.float()).item()
+                    if val_mse < best_val_mse:
+                        best_val_mse = val_mse
+                else:
+                    logits = out
+                    val_pred = logits[val_idx].argmax(dim=1)
+                    val_acc = (val_pred == y_val).float().mean().item()
+                    if val_acc > best_val_acc:
+                        best_val_acc = val_acc
+        
+        if formulation == 'ordinal':
+            all_best_val.append(best_val_mse)
+        else:
+            all_best_val.append(best_val_acc)
+
+    return float(np.mean(all_best_val)), float(np.std(all_best_val))
 
 depths = list(range(1, 7))
 val_mse_list = []
+val_mse_stds = []
 val_acc_list = []
+val_acc_stds = []
 
 for d in depths:
-    best_mse = train_depth_gat(d, 'ordinal', epochs=200)
-    best_acc = train_depth_gat(d, 'cls', epochs=200)
+    best_mse, std_mse = train_depth_gat(d, 'ordinal', epochs=200)
+    best_acc, std_acc = train_depth_gat(d, 'cls', epochs=200)
     val_mse_list.append(best_mse)
+    val_mse_stds.append(std_mse)
     val_acc_list.append(best_acc)
-    print(f"depth={d}: best_val_mse(ordinal)={best_mse:.6f}, best_val_acc(cls)={best_acc:.6f}")
+    val_acc_stds.append(std_acc)
+    print(f"depth={d}: best_val_mse(ordinal)={best_mse:.6f}±{std_mse:.4f}, best_val_acc(cls)={best_acc:.6f}±{std_acc:.4f}")
 
 print("\nDepth | val_MSE (Ordinal) | val_Acc (Cls)")
 for d, vm, va in zip(depths, val_mse_list, val_acc_list):
@@ -403,14 +420,14 @@ best_depth_cls = int(depths[int(np.argmax(val_acc_list))])
 
 # Dual-line plot
 fig, ax1 = plt.subplots(figsize=(10, 5))
-ax1.plot(depths, val_mse_list, color='blue', marker='o', label='val_MSE (ordinal)')
+ax1.errorbar(depths, val_mse_list, yerr=val_mse_stds, color='blue', marker='o', label='val_MSE (ordinal)', capsize=4)
 ax1.set_xlabel('GAT depth (#message-passing layers)')
 ax1.set_ylabel('val_MSE (ordinal)', color='blue')
 ax1.tick_params(axis='y', labelcolor='blue')
 ax1.grid(True, alpha=0.25)
 
 ax2 = ax1.twinx()
-ax2.plot(depths, val_acc_list, color='orange', marker='o', label='val_Acc (classification)')
+ax2.errorbar(depths, val_acc_list, yerr=val_acc_stds, color='orange', marker='o', label='val_Acc (classification)', capsize=4)
 ax2.set_ylabel('val_Acc (classification)', color='orange')
 ax2.tick_params(axis='y', labelcolor='orange')
 

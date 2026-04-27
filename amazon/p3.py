@@ -248,30 +248,42 @@ print(f"\n  {'Depth':>6} | {'Val Acc':>9}")
 print(f"  {'─'*6} | {'─'*9}")
 
 for depth in range(1, 7):
-    torch.manual_seed(42)
-    model = GATDepth(depth, dropout, hidden).to(device)
-    opt   = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
-    best_val = 0.0
-    for epoch in range(200):
-        model.train()
-        opt.zero_grad()
-        out  = model(data.x, data.edge_index)
-        loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
-        loss.backward()
-        opt.step()
-        va = evaluate_model(model, data, data.val_mask)
-        if va > best_val:
-            best_val = va
-    depth_results.append({'depth': depth, 'val_acc': best_val})
-    print(f"  {depth:>6} | {best_val:>9.4f}")
+    all_best_val = []
+    seeds = [42, 123, 456, 789, 999]
+    for current_seed in seeds:
+        torch.manual_seed(current_seed)
+        np.random.seed(current_seed)
+        random.seed(current_seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(current_seed)
+
+        model = GATDepth(depth, dropout, hidden).to(device)
+        opt   = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
+        best_val = 0.0
+        for epoch in range(200):
+            model.train()
+            opt.zero_grad()
+            out  = model(data.x, data.edge_index)
+            loss = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
+            loss.backward()
+            opt.step()
+            va = evaluate_model(model, data, data.val_mask)
+            if va > best_val:
+                best_val = va
+        all_best_val.append(best_val)
+
+    mean_val = float(np.mean(all_best_val))
+    std_val = float(np.std(all_best_val))
+    depth_results.append({'depth': depth, 'val_acc': mean_val, 'val_acc_std': std_val})
+    print(f"  {depth:>6} | {mean_val:>9.4f}±{std_val:.4f}")
 
 # Plot oversmoothing
 depths   = [r['depth']  for r in depth_results]
 val_accs = [r['val_acc'] for r in depth_results]
+val_stds = [r['val_acc_std'] for r in depth_results]
 
 fig, ax = plt.subplots(figsize=(7, 4))
-ax.plot(depths, val_accs, marker='o', color='#2563EB',
-        linewidth=2, markersize=8, markerfacecolor='white', markeredgewidth=2)
+ax.errorbar(depths, val_accs, yerr=val_stds, marker='o', color='#2563EB',
+        linewidth=2, markersize=8, markerfacecolor='white', markeredgewidth=2, capsize=4)
 for d, v in zip(depths, val_accs):
     ax.annotate(f"{v:.4f}", (d, v), textcoords="offset points",
                 xytext=(0, 10), ha='center', fontsize=8)

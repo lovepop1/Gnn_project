@@ -65,6 +65,7 @@ OGBG-MOLHIV \cite{hu2020} contains 41,127 molecular graphs (our largest dataset)
 \caption{Dataset Statistics}
 \label{tab:datasets}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Property} & \textbf{Amazon} & \textbf{Airports} & \textbf{MOLHIV} \\
@@ -78,7 +79,8 @@ Classes / Labels      & 10             & 0--3 ordinal  & Binary       \\
 Metric                & Test Acc, F1   & Kappa, MSE    & ROC-AUC      \\
 Split                 & 60/20/20 strat.& 70/15/15 strat.& Scaffold    \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 % â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -113,6 +115,7 @@ Amazon uses test accuracy and macro-averaged F1. Airports uses weighted Cohen's 
 \caption{Amazon Computers Results}
 \label{tab:amazon}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model} & \textbf{Best Config} & \textbf{Acc (\%)} & \textbf{F1} & \textbf{Time (s)} \\
@@ -122,13 +125,15 @@ GAT     & lr=0.01,d=0.3,h=256    & 90.99$\pm$0.25 & 0.902$\pm$0.003 & 15.0$\pm$0
 GraphSAGE & lr=0.01,d=0.3,h=256  & 90.80$\pm$0.22 & 0.895$\pm$0.003 & 17.9$\pm$0.5 \\
 GIN     & lr=0.001,d=0.3,h=256   & 88.26$\pm$0.51 & 0.865$\pm$0.006 & 18.9$\pm$0.6 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{table}[t]
 \caption{Amazon Per-Class Test Accuracy (GAT / GraphSAGE / GIN)}
 \label{tab:amazon_perclass}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Class} & \textbf{GAT} & \textbf{SAGE} & \textbf{GIN} & \textbf{Count} \\
@@ -146,12 +151,13 @@ GIN     & lr=0.001,d=0.3,h=256   & 88.26$\pm$0.51 & 0.865$\pm$0.006 & 18.9$\pm$0
 \midrule
 Macro & 0.898 & 0.882 & 0.820 & --- \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/amazon_all_curves.png}
+\includegraphics[width=\columnwidth]{figures/amazon_all_curves.jpeg}
 \caption{Training and validation accuracy curves for GAT, GraphSAGE, and GIN on Amazon Computers. All models converge within 200 epochs; GAT reaches the highest validation accuracy of 91.49\%.}
 \label{fig:amazon_curves}
 \end{figure}
@@ -165,7 +171,7 @@ Macro & 0.898 & 0.882 & 0.820 & --- \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/amazon_tsne.png}
+\includegraphics[width=\columnwidth]{figures/amazon_tsne.jpeg}
 \caption{t-SNE projection of GAT conv-1 hidden representations (test nodes). Same-class products form coherent 2-D clusters, confirming that a single aggregation hop produces class-discriminative embeddings. Classes with overlapping clusters correspond to the lowest per-class accuracies in Table~\ref{tab:amazon_perclass}.}
 \label{fig:amazon_tsne}
 \end{figure}
@@ -182,6 +188,7 @@ The oversmoothing analysis (Fig.~\ref{fig:amazon_oversmooth}) shows that GAT val
 \caption{Airports: Ordinal vs.\ Classification Kappa Comparison}
 \label{tab:airports_delta}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model} & \textbf{Ord $\kappa$} & \textbf{Cls $\kappa$} & \textbf{$\Delta\kappa$} & \textbf{Catastrophic err.} \\
@@ -192,13 +199,15 @@ GIN        & 0.5758$\pm$0.016 & 0.5808$\pm$0.019 & $-0.0050$ & ---   \\
 \midrule
 Mean       & 0.4867 & 0.4943 & $-0.0076$ & $-2.381$ pp \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{table}[t]
 \caption{Airports: Full Ordinal Regression Results}
 \label{tab:airports_ord}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
 \textbf{Model} & \textbf{$\kappa$} & \textbf{MSE} & \textbf{MAE} & \textbf{Acc} & \textbf{F1} \\
@@ -208,13 +217,15 @@ GAT              & 0.5069$\pm$0.020 & 1.010$\pm$0.041 & 0.777$\pm$0.021 & 0.444$
 GraphSAGE        & 0.3773$\pm$0.015 & 1.089$\pm$0.038 & 0.853$\pm$0.025 & 0.343$\pm$0.012 & 0.330$\pm$0.013 \\
 GIN              & 0.5758$\pm$0.016 & 0.644$\pm$0.021 & 0.641$\pm$0.018 & 0.455$\pm$0.015 & 0.431$\pm$0.017 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{table}[t]
 \caption{Airports Per-Activity-Level MAE (Best Ordinal vs.\ Best Classification)}
 \label{tab:airports_mae}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{True Label} & \textbf{Best Ord MAE} & \textbf{Best Cls MAE} & \textbf{Diff} \\
@@ -224,7 +235,8 @@ GIN              & 0.5758$\pm$0.016 & 0.644$\pm$0.021 & 0.641$\pm$0.018 & 0.455$
 2              & 0.362 & 0.830 & $-0.468$ \\
 3 (regional)   & 1.048 & 0.476 & $+0.571$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[t]
@@ -266,6 +278,7 @@ Table~\ref{tab:airports_mae} reveals one important nuance regarding this catastr
 \caption{OGBG-MOLHIV Results}
 \label{tab:molhiv}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lp{2.8cm}cccc}
 \toprule
 \textbf{Model} & \textbf{Best Config} & \textbf{ROC} & \textbf{Prec} & \textbf{Rec} & \textbf{F1} \\
@@ -274,13 +287,14 @@ GIN  & lr=0.001,L=5,bs=32  & 0.7842$\pm$0.012 & 0.082$\pm$0.012 & 0.684$\pm$0.03
 GAT  & lr=0.0001,L=5,bs=32 & 0.7761$\pm$0.014 & 0.101$\pm$0.014 & 0.635$\pm$0.038 & 0.174$\pm$0.019 \\
 SAGE & lr=0.001,L=3,bs=64  & 0.7785$\pm$0.010 & 0.138$\pm$0.017 & 0.512$\pm$0.041 & 0.217$\pm$0.021 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/molhiv_all_curves.png}
-\caption{Validation ROC-AUC curves for GIN, GAT, and GraphSAGE on OGBG-MOLHIV. GAT converges to the highest validation ROC (0.8199) after 5-layer depth; GIN and GraphSAGE show similar validation trajectories despite different bond-feature treatment.}
+\includegraphics[width=\columnwidth]{figures/molhiv_all_curves.jpeg}
+\caption{Validation ROC-AUC curves for GIN, GAT, and GraphSAGE on OGBG-MOLHIV. GIN achieves the highest validation ROC (0.8415) at 5-layer depth; GAT and GraphSAGE show stable trajectories across depths.}
 \label{fig:molhiv_curves}
 \end{figure}
 
@@ -310,12 +324,13 @@ GIN structure-only ROC-AUC is 0.6569 (vs.\ 0.7842 full), GAT is 0.6151 (vs.\ 0.7
 
 Ablation C varies the number of message-passing layers among \{2, 5, 8\} to characterise oversmoothing behaviour. This maps to the rubric example \emph{``vary a structural hyperparameter to measure depth sensitivity.''}
 
-As illustrated in Fig.~\ref{fig:molhiv_depth}, the best validation ROC-AUC peaks differently for each architecture: GIN peaks at depth 2 (0.8225), GAT at depth 5 (0.8285), and GraphSAGE at depth 8 (0.8309). GIN's early optimum reflects its sum aggregator's susceptibility to over-squashing at deeper layers, where aggregating varied molecular neighbourhood sizes introduces significant positional variance. GAT's attention mechanism mitigates this by pruning uninformative paths, delaying oversmoothing to depth 5. GraphSAGE's mean aggregator is the most robust to depth, benefiting from progressively wider receptive fields across molecular scaffolds without accumulating compounding summation variance.
+As illustrated in Fig.~\ref{fig:molhiv_depth}, the best validation ROC-AUC peaks differently for each architecture: GIN peaks at depth 5 (0.8415), GAT at depth 8 (0.8267), and GraphSAGE at depth 8 (0.8309). GIN's optimum at depth 5 reflects its sum aggregator's ability to accumulate significant structural evidence across the molecular scaffold before the onset of oversmoothing. GAT and GraphSAGE exhibit even greater depth robustness, reaching their maximum performance at depth 8; GAT's attention mechanism and GraphSAGE's mean aggregation effectively mitigate representational collapse at greater depths.
 
 \begin{table}[t]
 \caption{MOLHIV Ablation Study (validation ROC-AUC at 100 epochs).\textsuperscript{a}}
 \label{tab:ablation}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model} & \textbf{Full} & \textbf{Atoms Only} & \textbf{Struct.\ Only} & \textbf{Best Depth} \\
@@ -324,7 +339,8 @@ GIN        & 0.7842$\pm$0.012 & 0.6427$\pm$0.012 & 0.6569$\pm$0.014 & 5 \\
 GAT        & 0.7761$\pm$0.014 & 0.6069$\pm$0.012 & 0.6151$\pm$0.013 & 8 \\
 GraphSAGE  & 0.7785$\pm$0.010 & 0.6517$\pm$0.011 & 0.5112$\pm$0.016 & 8 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \begin{minipage}{\columnwidth}\vspace{2pt}
 \footnotesize \textsuperscript{a}All ablations re-trained for 100 epochs for controlled comparison; the Full column reports the same checkpoint tested on the held-out test split used for the ablation run. Values therefore differ from the final tuned test ROC in Table~\ref{tab:molhiv} (300-epoch training with best hyper-parameters); the direction of all comparisons is preserved.
 \end{minipage}
@@ -333,7 +349,7 @@ GraphSAGE  & 0.7785$\pm$0.010 & 0.6517$\pm$0.011 & 0.5112$\pm$0.016 & 8 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/molhiv_depth_all_models.png}
-\caption{Validation ROC-AUC vs.\ number of GNN layers (depths 2, 5, 8) for all three architectures on OGBG-MOLHIV. GIN peaks at depth 2; GAT and GraphSAGE continue improving at greater depth, reflecting their respective mechanisms for managing over-squashing.}
+\caption{Validation ROC-AUC vs.\ number of GNN layers (depths 2, 5, 8) for all three architectures on OGBG-MOLHIV. GIN peaks at depth 5; GAT and GraphSAGE continue improving at greater depth, reflecting their respective mechanisms for managing over-squashing.}
 \label{fig:molhiv_depth}
 \end{figure}
 
@@ -351,7 +367,7 @@ The colour and marker scheme encodes four outcomes: \emph{orange circles} = corr
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/molhiv_tsne_all_models.png}
+\includegraphics[width=\columnwidth]{figures/molhiv_tsne_all_models.jpeg}
 \caption{t-SNE projections of test-set graph embeddings for GIN (left), GAT (centre), and GraphSAGE (right). Orange circles: active correct; grey circles: inactive correct; pink X: active misclassified; blue X: inactive misclassified. Active molecules form internal high-density clusters that do not fully separate from the inactive manifold due to extreme class imbalance.}
 \label{fig:molhiv_tsne}
 \end{figure}
@@ -360,6 +376,7 @@ The colour and marker scheme encodes four outcomes: \emph{orange circles} = corr
 \caption{MOLHIV Misclassification Rates on Test Set}
 \label{tab:misclass}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model} & \textbf{Active Correct (\%)} & \textbf{Active Mis.\ (\%)} & \textbf{Inactive Mis.\ (\%)} \\
@@ -368,13 +385,15 @@ GIN        & 88.57 & 11.43 & 24.84 \\
 GAT        & 80.18 & 19.82 & 14.82 \\
 GraphSAGE  & 92.24 &  7.76 &  8.47 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{table}[t]
 \caption{MOLHIV Efficiency Metrics}
 \label{tab:efficiency}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model} & \textbf{Parameters} & \textbf{Test ROC} & \textbf{Train Time (s)} \\
@@ -383,7 +402,8 @@ GIN        & 1,445,701 & 0.7842$\pm$0.012 & 1,182$\pm$15 \\
 GAT        & 1,447,201 & 0.7761$\pm$0.014 & 2,076$\pm$22 \\
 GraphSAGE  &   618,001 & 0.7785$\pm$0.010 & 475$\pm$9 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[t]

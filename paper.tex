@@ -294,7 +294,7 @@ SAGE & lr=0.001,L=3,bs=64  & 0.7785$\pm$0.010 & 0.138$\pm$0.017 & 0.512$\pm$0.04
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/molhiv_all_curves.jpeg}
-\caption{Validation ROC-AUC trajectories across 300 training epochs for GIN, GAT, and GraphSAGE on OGBG-MOLHIV. GIN reaches its peak performance early in the training cycle, while GAT requires more extensive epochs to stabilize its attention mechanisms.}
+\caption{Validation ROC-AUC trajectories across 100 training epochs for GIN, GAT, and GraphSAGE on OGBG-MOLHIV. GIN reaches its peak performance early in the training cycle, while GAT requires more extensive epochs to stabilize its attention mechanisms.}
 \label{fig:molhiv_curves}
 \end{figure}
 
@@ -472,7 +472,7 @@ The Airports experiment reveals a nuanced lesson about loss function choice. Whi
 
 \begin{itemize}
     \item \textbf{Choose GAT} when edge-level attention matters (heterogeneous or noisy graphs with varying link quality) and edge features are available; it is the most robust overall architecture across all three task types.
-    \item \textbf{Choose GraphSAGE} for large-scale tasks with tight parameter or compute budgets; it delivers competitive performance (within 0.2 pp of GAT on Amazon, marginally outperforming GAT by 0.002 ROC on MOLHIV) at less than half the parameter count.
+    \item \textbf{Choose GraphSAGE} for large-scale tasks with tight parameter or compute budgets; it delivers competitive performance (within 0.2 pp of GAT on Amazon, marginally outperforming GAT by 0.0024 ROC on MOLHIV) at less than half the parameter count.
     \item \textbf{Choose GIN} when the task is inherently ordinal or when neighbourhood multiset distinctiveness is critical (e.g., distinguishing hub-vs-spoke connectivity patterns); its sum aggregator maximises WL-expressiveness.
     \item \textbf{Prefer ordinal MSE over CrossEntropy} whenever class labels carry natural ordering---the quadratic gradient penalty eliminates extreme misclassification at negligible cost to average kappa, and may be decisive in safety-critical applications such as infrastructure planning.
 \end{itemize}

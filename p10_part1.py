@@ -300,7 +300,7 @@ for m in ['GAT', 'SAGE', 'GIN']:
     d = amz.get(m, {})
     print(f"[AMAZON] {m}_test_acc: {float(d.get('test_acc',0))*100:.2f}±{float(d.get('test_acc_std',0))*100:.2f}%  "
           f"{m}_f1: {fmt(d.get('f1','N/A'), 3)}±{fmt(d.get('f1_std',0), 3)}  "
-          f"{m}_time: {_t(amz, m)}±{fmt(d.get('time_std',0), 1)}s  "
+          f"{m}_time: {float(d.get('time',0))/200:.4f}s (per-epoch)  "
           f"{m}_cfg: {_cfg(amz, m)}")
 print(f"[AMAZON] best_model: {amazon_best}  best_acc: {amazon_best_acc*100:.2f}%")
 print(f"[AMAZON] gnn_gain_over_mlp: {gnn_gain:.2f} pp")
@@ -323,7 +323,7 @@ for mk, rk in [('GAT','GAT_ordinal'), ('SAGE','GraphSAGE_ordinal'), ('GIN','GIN_
     d = ap.get(rk, {})
     print(f"[AIRPORTS] {mk}_ordinal_full: mse={fmt(d.get('mse','N/A'),3)}±{fmt(d.get('mse_std',0),3)} mae={fmt(d.get('mae','N/A'),3)}±{fmt(d.get('mae_std',0),3)} "
           f"acc={fmt(d.get('acc','N/A'),3)}±{fmt(d.get('acc_std',0),3)} kappa={fmt(d.get('kappa','N/A'),4)}±{fmt(d.get('kappa_std',0),4)} f1={fmt(d.get('f1','N/A'),3)}±{fmt(d.get('f1_std',0),3)} "
-          f"time={round(float(d.get('time',0)))}s")
+          f"time={float(d.get('time',0))/300:.4f}s")
 
 for mk, ck in [('GAT','GAT_cls'), ('SAGE','GraphSAGE_cls'), ('GIN','GIN_cls')]:
     d = ap.get(ck, {})
@@ -348,7 +348,7 @@ for mk, rk in [('GIN','GIN'), ('GAT','GAT'), ('SAGE','GraphSAGE')]:
           f"{mk}_prec: {fmt(d.get('precision','N/A'),3)}±{fmt(d.get('precision_std',0),3)}  "
           f"{mk}_rec: {fmt(d.get('recall','N/A'),3)}±{fmt(d.get('recall_std',0),3)}  "
           f"{mk}_f1: {fmt(d.get('f1','N/A'),3)}±{fmt(d.get('f1_std',0),3)}  "
-          f"{mk}_time: {round(float(d.get('time',0)))}s  "
+          f"{mk}_time: {float(d.get('time',0))/100:.4f}s (per-epoch)  "
           f"{mk}_cfg: {cfg_s}")
 
 print(f"[MOLHIV] best_model: {molhiv_best}  best_roc: {molhiv_best_roc:.4f}")
@@ -389,7 +389,7 @@ p10_data = {
     'amazon_accs': amazon_accs,
     'amazon_accs_stds': {m: float(amazon_r.get(m, {}).get('test_acc_std', 0)) for m in ['GAT','SAGE','GIN']},
     'amazon_f1':   {m: amazon_r.get(m,{}).get('f1','N/A') for m in ['GAT','SAGE','GIN']},
-    'amazon_time': {m: amazon_r.get(m,{}).get('time','N/A') for m in ['GAT','SAGE','GIN']},
+    'amazon_time': {m: float(amazon_r.get(m,{}).get('time',0))/200.0 for m in ['GAT','SAGE','GIN']},
     'amazon_rank': amazon_rank,
     # Airports ordinal kappas
     'airports_ord_kappas': airports_ord_kappas,
@@ -400,9 +400,9 @@ p10_data = {
     },
     'airports_rank': airports_rank,
     'airports_ord_times': {
-        'GAT':  airports_r.get('GAT_ordinal',{}).get('time','N/A'),
-        'SAGE': airports_r.get('GraphSAGE_ordinal',{}).get('time','N/A'),
-        'GIN':  airports_r.get('GIN_ordinal',{}).get('time','N/A'),
+        'GAT':  float(airports_r.get('GAT_ordinal',{}).get('time',0))/300.0,
+        'SAGE': float(airports_r.get('GraphSAGE_ordinal',{}).get('time',0))/300.0,
+        'GIN':  float(airports_r.get('GIN_ordinal',{}).get('time',0))/300.0,
     },
     # MOLHIV
     'molhiv_rocs': molhiv_rocs,
@@ -413,9 +413,9 @@ p10_data = {
     },
     'molhiv_rank': molhiv_rank,
     'molhiv_times': {
-        'GIN':  molhiv_r.get('GIN',{}).get('time','N/A'),
-        'GAT':  molhiv_r.get('GAT',{}).get('time','N/A'),
-        'SAGE': molhiv_r.get('GraphSAGE',{}).get('time','N/A'),
+        'GIN':  float(molhiv_r.get('GIN',{}).get('time',0)) / 100.0,
+        'GAT':  float(molhiv_r.get('GAT',{}).get('time',0)) / 100.0,
+        'SAGE': float(molhiv_r.get('GraphSAGE',{}).get('time',0)) / 100.0,
     },
     # Cross
     'rank_sum': rank_sum,

@@ -197,18 +197,23 @@ for i, (arch, colour) in enumerate(zip(arch_keys, arch_colours)):
                   label=arch, edgecolor='white', alpha=0.9)
     for bar, val in zip(bars, vals):
         if val > 0:
+            # Position text slightly above the bar in log space
             ax.text(bar.get_x() + bar.get_width()/2,
-                    bar.get_height() + max(max(v) for v in times.values())*0.01,
-                    f'{val:.1f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+                    val * 1.05, 
+                    f'{val:.3f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
 
 ax.set_xticks(x)
 ax.set_xticklabels(datasets, fontsize=11)
-ax.set_ylabel('Training Time (s)', fontsize=11)
-ax.set_title('Training Time per Architecture and Dataset', fontsize=12, fontweight='bold')
-ax.legend(title='Architecture', fontsize=10)
+ax.set_yscale('log')
+ax.set_ylabel('Training Time per Epoch (s)', fontsize=11)
+ax.set_title('Training Time per Architecture (Per-Epoch)', fontsize=12, fontweight='bold')
+ax.legend(title='Architecture', fontsize=10, loc='upper left')
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-ax.set_ylim(0, max(max(v) for v in times.values()) * 1.2)
+
+# Adjust ylim for log scale
+ax.set_ylim(min(min(v) for v in times.values()) * 0.5, 
+            max(max(v) for v in times.values()) * 5.0)
 
 plt.tight_layout()
 fig3_path = os.path.join(ROOT, 'cross_dataset_time.png')

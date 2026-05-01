@@ -15,7 +15,7 @@
 \begin{document}
 
 \title{Graph Neural Networks for Node and Graph Classification:\\
-An Empirical Comparison Across Three Heterogeneous Datasets}
+An Empirical Comparison Across Three Homogeneous Datasets}
 
 \author{
 \IEEEauthorblockN{Adithya Nangarath\textsuperscript{1}, K V Nikhilesh\textsuperscript{2}, Vishruth Vijay\textsuperscript{3}}
@@ -118,12 +118,12 @@ Amazon uses test accuracy and macro-averaged F1. Airports uses weighted Cohen's 
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Model} & \textbf{Best Config} & \textbf{Acc (\%)} & \textbf{F1} & \textbf{Time (s)} \\
+\textbf{Model} & \textbf{Best Config} & \textbf{Acc (\%)} & \textbf{F1} & \textbf{Time/Ep (s)} \\
 \midrule
-MLP     & ---                    & 84.55$\pm$0.41 & 0.800$\pm$0.006 & 2.8$\pm$0.1  \\
-GAT     & lr=0.01,d=0.3,h=256    & 90.99$\pm$0.25 & 0.902$\pm$0.003 & 15.0$\pm$0.5 \\
-GraphSAGE & lr=0.01,d=0.3,h=256  & 90.80$\pm$0.22 & 0.895$\pm$0.003 & 17.9$\pm$0.5 \\
-GIN     & lr=0.001,d=0.3,h=256   & 88.26$\pm$0.51 & 0.865$\pm$0.006 & 18.9$\pm$0.6 \\
+MLP     & ---                    & 84.55$\pm$0.41 & 0.800$\pm$0.006 & 0.014$\pm$0.001 \\
+GAT     & lr=0.01,d=0.3,h=256    & 90.99$\pm$0.25 & 0.902$\pm$0.003 & 0.075$\pm$0.002 \\
+GraphSAGE & lr=0.01,d=0.3,h=256  & 90.80$\pm$0.22 & 0.895$\pm$0.003 & 0.090$\pm$0.003 \\
+GIN     & lr=0.001,d=0.3,h=256   & 88.26$\pm$0.51 & 0.865$\pm$0.006 & 0.095$\pm$0.003 \\
 \bottomrule
 \end{tabular}%
 }
@@ -396,11 +396,11 @@ GraphSAGE  & 92.24 &  7.76 &  8.47 \\
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
-\textbf{Model} & \textbf{Parameters} & \textbf{Test ROC} & \textbf{Train Time (s)} \\
+\textbf{Model} & \textbf{Parameters} & \textbf{Test ROC} & \textbf{Time/Epoch (s)} \\
 \midrule
-GIN        & 1,445,701 & 0.7842$\pm$0.012 & 1,182$\pm$15 \\
-GAT        & 1,447,201 & 0.7761$\pm$0.014 & 2,076$\pm$22 \\
-GraphSAGE  &   618,001 & 0.7785$\pm$0.010 & 475$\pm$9 \\
+GIN        & 1,445,701 & 0.7842$\pm$0.012 & 11.82$\pm$0.2 \\
+GAT        & 1,447,201 & 0.7761$\pm$0.014 & 20.76$\pm$0.5 \\
+GraphSAGE  &   618,001 & 0.7785$\pm$0.010 & 4.75$\pm$0.1 \\
 \bottomrule
 \end{tabular}%
 }
@@ -409,13 +409,13 @@ GraphSAGE  &   618,001 & 0.7785$\pm$0.010 & 475$\pm$9 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/molhiv_efficiency.png}
-\caption{Efficiency comparison: test ROC-AUC vs.\ trainable parameters and vs.\ wall-clock training time. GraphSAGE achieves competitive performance (0.7608 ROC) with only 618,001 parameters---less than half those of GIN or GAT---and the shortest training time of 1,127 seconds.}
+\caption{Efficiency comparison: test ROC-AUC vs.\ trainable parameters and vs.\ wall-clock training time. GraphSAGE achieves competitive performance (0.7785 ROC) with only 618,001 parameters---less than half those of GIN or GAT---and the shortest training time of 4.75s per epoch.}
 \label{fig:molhiv_eff}
 \end{figure}
 
 As quantified in Table~\ref{tab:misclass} and visualised in Fig.~\ref{fig:molhiv_tsne}, GraphSAGE achieves the highest active-molecule recall (92.24\% correct, only 7.76\% false negatives) and the lowest inactive misclassification rate (8.47\%), making it the most balanced architecture in absolute terms despite the bond-feature omission. The t-SNE projections demonstrate that active molecules form dense internal clusters surrounded by the massive inactive manifold; the overlap at the boundaries directly drives the false-positive rates. GAT identifies 80.18\% of active molecules correctly but generates a higher inactive false positive rate (14.82\%), reflecting its slightly less precise structural differentiation at the cluster boundaries. GIN correctly classifies 88.57\% of active compounds but suffers the highest inactive misclassification rate (24.84\%), indicating its sum-based decision boundary is overly aggressive in claiming positives.
 
-From an efficiency perspective, as plotted in Fig.~\ref{fig:molhiv_eff} alongside the metrics in Table~\ref{tab:efficiency}, GraphSAGE emerges as the clear winner: with only 618,001 trainable parameters---less than half of GIN's 1,445,701 or GAT's 1,447,201---it achieves a highly competitive 0.7785 ROC-AUC in just 475 seconds of training time, compared to GAT's 2,076 seconds. GIN achieves the best overall ROC-AUC (0.7842) but requires substantially more parameters, cementing GraphSAGE as the recommended architecture for resource-constrained, large-scale molecular screening pipelines.
+From an efficiency perspective, as plotted in Fig.~\ref{fig:molhiv_eff} alongside the metrics in Table~\ref{tab:efficiency}, GraphSAGE emerges as the clear winner: with only 618,001 trainable parameters---less than half of GIN's 1,445,701 or GAT's 1,447,201---it achieves a highly competitive 0.7785 ROC-AUC in just 4.75s per epoch, compared to GAT's 20.76s. GIN achieves the best overall ROC-AUC (0.7842) but requires substantially more parameters, cementing GraphSAGE as the recommended architecture for resource-constrained, large-scale molecular screening pipelines.
 
 % â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 \section{Cross-Dataset Comparative Analysis}
@@ -450,7 +450,7 @@ GIN        & 3 & 1 & 1 & 5 \\
 \includegraphics[width=0.49\columnwidth]{figures/cross_dataset_rank.png}%
 \hfill
 \includegraphics[width=0.49\columnwidth]{figures/cross_dataset_time.png}
-\caption{Left: rank heatmap across datasets (green=best, red=worst). Right: training time in seconds per architecture per dataset. MOLHIV training times ($>$1,000 s) dwarf node-level tasks ($<$20 s) due to the 41,127-graph scale.}
+\caption{Left: rank heatmap across datasets (green=best, red=worst). Right: training time per epoch (s). Even when normalized per epoch, MOLHIV times ($\sim$20 s) dwarf node-level tasks ($<$0.1 s) due to the 41,127-graph throughput requirement.}
 \label{fig:cross_rank_time}
 \end{figure}
 

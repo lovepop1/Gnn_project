@@ -34,9 +34,9 @@ ANALYSIS 2 — VISUALISATION
 ══════════════════════════════════════════════════════
 | Model     | % Active correct | % Active misclassified | % Inactive misclassified |
 |-----------|-----------------|----------------------|------------------------|
-| GAT       |           80.18% |                19.82% |                  14.82% |
-| GraphSAGE |           92.24% |                 7.76% |                   8.47% |
-| GIN       |           88.57% |                11.43% |                  24.84% |
+| GAT       |           63.54% |                36.46% |                  20.46% |
+| GraphSAGE |           51.23% |                48.77% |                  11.58% |
+| GIN       |           68.45% |                31.55% |                  27.98% |
 
 ─── VISUALISATION INTERPRETATION ───
 (1) The active molecules (orange) naturally form internal high-density topological clusters but are not perfectly distinctly separable from the inactive manifold space (grey) across all 3 models.

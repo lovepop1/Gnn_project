@@ -54,6 +54,6 @@ To regenerate the cross-dataset analysis, figures, and consolidated output:
 | **MOLHIV** | GIN | 0.7842 ROC | 11.821s |
 
 ## 📝 Authors
-- **Adithya Nangarath** (IMT2022024)
-- **K V Nikhilesh** (IMT2022511)
-- **Vishruth Vijay** (IMT2022507)
+- **Adithya Nangarath**
+- **K V Nikhilesh**
+- **Vishruth Vijay**

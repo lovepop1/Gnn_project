@@ -93,14 +93,14 @@ ax.spines['right'].set_visible(False)
 
 # — Subplot 3: MOLHIV Test ROC-AUC —
 ax = axes[2]
-mol_models  = ['GIN', 'GAT', 'SAGE']
-mol_colours = [C_GIN, C_GAT, C_SAGE]
-mol_rocs    = [float(D['molhiv_rocs']['GIN']),
-               float(D['molhiv_rocs']['GAT']),
-               float(D['molhiv_rocs']['SAGE'])]
-mol_stds    = [float(D['molhiv_rocs_stds']['GIN']),
-               float(D['molhiv_rocs_stds']['GAT']),
-               float(D['molhiv_rocs_stds']['SAGE'])]
+mol_models  = ['GAT', 'SAGE', 'GIN']
+mol_colours = [C_GAT, C_SAGE, C_GIN]
+mol_rocs    = [float(D['molhiv_rocs']['GAT']),
+               float(D['molhiv_rocs']['SAGE']),
+               float(D['molhiv_rocs']['GIN'])]
+mol_stds    = [float(D['molhiv_rocs_stds']['GAT']),
+               float(D['molhiv_rocs_stds']['SAGE']),
+               float(D['molhiv_rocs_stds']['GIN'])]
 
 bars = ax.barh(mol_models, mol_rocs, xerr=mol_stds, color=mol_colours, height=0.55, edgecolor='white', capsize=4)
 for bar, val, std in zip(bars, mol_rocs, mol_stds):
